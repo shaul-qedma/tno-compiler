@@ -84,6 +84,16 @@ def canonicalize_tensor(T, left=True):
         return Q.reshape((Q.shape[0],) + shape[1:]), R
 
 
+def left_canonicalize(mpo_arrays):
+    """Put MPO in left-canonical form via QR sweep."""
+    result = [a.copy() for a in mpo_arrays]
+    for i in range(len(result) - 1):
+        Q, R = canonicalize_tensor(result[i], left=True)
+        result[i] = Q
+        result[i + 1] = np.einsum('ab,bcde->acde', R, result[i + 1])
+    return result
+
+
 def right_canonicalize(mpo_arrays):
     """Put MPO in right-canonical form via RQ sweep."""
     result = [a.copy() for a in mpo_arrays]
