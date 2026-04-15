@@ -73,9 +73,35 @@ def gates_to_qiskit(gates, n_qubits, n_layers, first_odd=True):
 
 
 def gates_to_unitary(gates, n_qubits, n_layers, first_odd=True):
-    """Get the exact 2^n x 2^n unitary matrix via Qiskit."""
-    qc = gates_to_qiskit(gates, n_qubits, n_layers, first_odd)
-    return Operator(qc).data
+    """Get the exact 2^n x 2^n unitary matrix by direct tensor contraction.
+
+    Uses big-endian qubit ordering (qubit 0 = most significant bit)
+    to match the matrix_to_mpo decomposition convention.
+    """
+    d = 2 ** n_qubits
+    U = np.eye(d, dtype=complex)
+    structure = layer_structure(n_qubits, n_layers, first_odd)
+    idx = 0
+    for _, pairs in structure:
+        layer_U = np.eye(d, dtype=complex)
+        for q1, q2 in pairs:
+            gate_mat = np.asarray(gates[idx]).reshape(4, 4)
+            # Build the full-system operator: I ⊗ ... ⊗ G ⊗ ... ⊗ I
+            # with G acting on qubits (q1, q2) in big-endian order
+            op = _embed_gate(gate_mat, q1, q2, n_qubits)
+            layer_U = op @ layer_U
+            idx += 1
+        U = layer_U @ U
+    return U
+
+
+def _embed_gate(gate_4x4, q1, q2, n_qubits):
+    """Embed a 2-qubit gate into the full Hilbert space (big-endian)."""
+    assert q2 == q1 + 1, "Only adjacent qubits supported"
+    d = 2 ** n_qubits
+    left = np.eye(2 ** q1) if q1 > 0 else np.array([[1.0]])
+    right = np.eye(2 ** (n_qubits - q2 - 1)) if q2 < n_qubits - 1 else np.array([[1.0]])
+    return np.kron(np.kron(left, gate_4x4), right)
 
 
 def unitary_to_mpo(U, n_qubits, max_bond=None):
@@ -98,4 +124,4 @@ def target_mpo(gates, n_qubits, n_layers, first_odd=True):
     """
     from .mpo_ops import matrix_to_mpo
     V = gates_to_unitary(gates, n_qubits, n_layers, first_odd)
-    return matrix_to_mpo(V)
+    return matrix_to_mpo(V.conj().T)
