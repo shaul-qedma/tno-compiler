@@ -1,0 +1,269 @@
+\begin{thebibliography}{10}
+\urlstyle{rm}
+\expandafter\ifx\csname url\endcsname\relax
+  \def\url#1{\texttt{#1}}\fi
+\expandafter\ifx\csname urlprefix\endcsname\relax\def\urlprefix{URL }\fi
+\expandafter\ifx\csname doiprefix\endcsname\relax\def\doiprefix{DOI: }\fi
+\providecommand{\bibinfo}[2]{#2}
+\providecommand{\eprint}[2][]{\url{#2}}
+
+\bibitem{Preskill2018_NISQ}
+\bibinfo{author}{Preskill, J.}
+\newblock \bibinfo{journal}{\bibinfo{title}{Quantum {C}omputing in the {NISQ}
+  era and beyond}}.
+\newblock {\emph{\JournalTitle{{Quantum}}}} \textbf{\bibinfo{volume}{2}},
+  \bibinfo{pages}{79}, \doiprefix\url{10.22331/q-2018-08-06-79}
+  (\bibinfo{year}{2018}).
+
+\bibitem{botea2018complexity}
+\bibinfo{author}{Botea, A.}, \bibinfo{author}{Kishimoto, A.} \&
+  \bibinfo{author}{Marinescu, R.}
+\newblock \bibinfo{title}{On the complexity of quantum circuit compilation}.
+\newblock In \emph{\bibinfo{booktitle}{Proceedings of the International
+  Symposium on Combinatorial Search}}, vol.~\bibinfo{volume}{9},
+  \bibinfo{pages}{138--142} (\bibinfo{year}{2018}).
+
+\bibitem{qiskit}
+\bibinfo{author}{Javadi-Abhari, A.} \emph{et~al.}
+\newblock \bibinfo{title}{Quantum computing with {Q}iskit},
+  \doiprefix\url{10.48550/arXiv.2405.08810} (\bibinfo{year}{2024}).
+\newblock \eprint{2405.08810}.
+
+\bibitem{bqskit}
+\bibinfo{author}{Younis, E.}, \bibinfo{author}{Iancu, C.~C.},
+  \bibinfo{author}{Lavrijsen, W.}, \bibinfo{author}{Davis, M.} \&
+  \bibinfo{author}{Smith, E.}
+\newblock \bibinfo{title}{Berkeley quantum synthesis toolkit (bqskit) v1}.
+\newblock \bibinfo{howpublished}{[Computer Software]
+  \url{https://doi.org/10.11578/dc.20210603.2}},
+  \doiprefix\url{10.11578/dc.20210603.2} (\bibinfo{year}{2021}).
+
+\bibitem{tket}
+\bibinfo{author}{Sivarajah, S.} \emph{et~al.}
+\newblock \bibinfo{journal}{\bibinfo{title}{tket : {A} {Retargetable}
+  {Compiler} for {NISQ} {Devices}}}.
+\newblock {\emph{\JournalTitle{Quantum Science and Technology}}}
+  \textbf{\bibinfo{volume}{6}}, \bibinfo{pages}{014003},
+  \doiprefix\url{10.1088/2058-9565/ab8e92} (\bibinfo{year}{2021}).
+\newblock \bibinfo{note}{ArXiv:2003.10611 [quant-ph]}.
+
+\bibitem{cirq}
+\bibinfo{author}{Developers, C.}
+\newblock \bibinfo{title}{Cirq}, \doiprefix\url{10.5281/zenodo.8161252}
+  (\bibinfo{year}{2023}).
+
+\bibitem{qdrift}
+\bibinfo{author}{Campbell, E.}
+\newblock \bibinfo{journal}{\bibinfo{title}{Random compiler for fast
+  hamiltonian simulation}}.
+\newblock {\emph{\JournalTitle{Physical Review Letters}}}
+  \textbf{\bibinfo{volume}{123}},
+  \doiprefix\url{10.1103/physrevlett.123.070503} (\bibinfo{year}{2019}).
+
+\bibitem{PRXQuantum.5.020101}
+\bibinfo{author}{Katabarwa, A.}, \bibinfo{author}{Gratsea, K.},
+  \bibinfo{author}{Caesura, A.} \& \bibinfo{author}{Johnson, P.~D.}
+\newblock \bibinfo{journal}{\bibinfo{title}{Early fault-tolerant quantum
+  computing}}.
+\newblock {\emph{\JournalTitle{PRX Quantum}}} \textbf{\bibinfo{volume}{5}},
+  \bibinfo{pages}{020101}, \doiprefix\url{10.1103/PRXQuantum.5.020101}
+  (\bibinfo{year}{2024}).
+
+\bibitem{wu_qgo}
+\bibinfo{author}{Wu, X.-C.}, \bibinfo{author}{Davis, M.~G.},
+  \bibinfo{author}{Chong, F.~T.} \& \bibinfo{author}{Iancu, C.}
+\newblock \bibinfo{title}{Reoptimization of quantum circuits via hierarchical
+  synthesis}.
+\newblock In \emph{\bibinfo{booktitle}{2021 International Conference on
+  Rebooting Computing (ICRC)}}, \bibinfo{pages}{35--46},
+  \doiprefix\url{10.1109/ICRC53822.2021.00016} (\bibinfo{year}{2021}).
+
+\bibitem{Burt_2024}
+\bibinfo{author}{Burt, F.}, \bibinfo{author}{Chen, K.-C.} \&
+  \bibinfo{author}{Leung, K.~K.}
+\newblock \bibinfo{title}{Generalised circuit partitioning for distributed
+  quantum computing}.
+\newblock In \emph{\bibinfo{booktitle}{2024 IEEE International Conference on
+  Quantum Computing and Engineering (QCE)}}, \bibinfo{pages}{173–178},
+  \doiprefix\url{10.1109/qce60285.2024.10273} (\bibinfo{publisher}{IEEE},
+  \bibinfo{year}{2024}).
+
+\bibitem{PhysRevA.95.042306}
+\bibinfo{author}{Campbell, E.}
+\newblock \bibinfo{journal}{\bibinfo{title}{Shorter gate sequences for quantum
+  computing by mixing unitaries}}.
+\newblock {\emph{\JournalTitle{Phys. Rev. A}}} \textbf{\bibinfo{volume}{95}},
+  \bibinfo{pages}{042306}, \doiprefix\url{10.1103/PhysRevA.95.042306}
+  (\bibinfo{year}{2017}).
+
+\bibitem{hastings2016turning}
+\bibinfo{author}{Hastings, M.~B.}
+\newblock \bibinfo{journal}{\bibinfo{title}{Turning gate synthesis errors into
+  incoherent errors}}.
+\newblock {\emph{\JournalTitle{arXiv:1612.01011}}}  (\bibinfo{year}{2016}).
+
+\bibitem{Kliuchnikov_2023}
+\bibinfo{author}{Kliuchnikov, V.}, \bibinfo{author}{Lauter, K.},
+  \bibinfo{author}{Minko, R.}, \bibinfo{author}{Paetznick, A.} \&
+  \bibinfo{author}{Petit, C.}
+\newblock \bibinfo{journal}{\bibinfo{title}{Shorter quantum circuits via
+  single-qubit gate approximation}}.
+\newblock {\emph{\JournalTitle{{Quantum}}}} \textbf{\bibinfo{volume}{7}},
+  \bibinfo{pages}{1208}, \doiprefix\url{10.22331/q-2023-12-18-1208}
+  (\bibinfo{year}{2023}).
+
+\bibitem{Akibu_ACM_2024}
+\bibinfo{author}{Akibue, S.}, \bibinfo{author}{Kato, G.} \&
+  \bibinfo{author}{Tani, S.}
+\newblock \bibinfo{journal}{\bibinfo{title}{Probabilistic unitary synthesis
+  with optimal accuracy}}.
+\newblock {\emph{\JournalTitle{ACM Transactions on Quantum Computing}}}
+  \textbf{\bibinfo{volume}{5}}, \doiprefix\url{10.1145/3663576}
+  (\bibinfo{year}{2024}).
+
+\bibitem{yoshioka2024errorcrafting}
+\bibinfo{author}{Yoshioka, N.}, \bibinfo{author}{Akibue, S.},
+  \bibinfo{author}{Morisaki, H.}, \bibinfo{author}{Tsubouchi, K.} \&
+  \bibinfo{author}{Suzuki, Y.}
+\newblock \bibinfo{title}{Error crafting in probabilistic quantum gate
+  synthesis} (\bibinfo{year}{2024}).
+\newblock \eprint{2405.15565}.
+
+\bibitem{Akibue2024}
+\bibinfo{author}{Akibue, S.}, \bibinfo{author}{Kato, G.} \&
+  \bibinfo{author}{Tani, S.}
+\newblock \bibinfo{journal}{\bibinfo{title}{Probabilistic state synthesis based
+  on optimal convex approximation}}.
+\newblock {\emph{\JournalTitle{npj Quantum Information}}}
+  \textbf{\bibinfo{volume}{10}}, \bibinfo{pages}{3},
+  \doiprefix\url{10.1038/s41534-023-00793-7} (\bibinfo{year}{2024}).
+
+\bibitem{low2021halving}
+\bibinfo{author}{Low, G.~H.}
+\newblock \bibinfo{title}{Halving the cost of quantum multiplexed rotations}
+  (\bibinfo{year}{2021}).
+\newblock \eprint{2110.13439}.
+
+\bibitem{campbell_qdrift}
+\bibinfo{author}{Campbell, E.}
+\newblock \bibinfo{journal}{\bibinfo{title}{Random compiler for fast
+  hamiltonian simulation}}.
+\newblock {\emph{\JournalTitle{Phys. Rev. Lett.}}}
+  \textbf{\bibinfo{volume}{123}}, \bibinfo{pages}{070503},
+  \doiprefix\url{10.1103/PhysRevLett.123.070503} (\bibinfo{year}{2019}).
+
+\bibitem{Ouyang2020compilation}
+\bibinfo{author}{Ouyang, Y.}, \bibinfo{author}{White, D.~R.} \&
+  \bibinfo{author}{Campbell, E.~T.}
+\newblock \bibinfo{journal}{\bibinfo{title}{Compilation by stochastic
+  {H}amiltonian sparsification}}.
+\newblock {\emph{\JournalTitle{{Quantum}}}} \textbf{\bibinfo{volume}{4}},
+  \bibinfo{pages}{235}, \doiprefix\url{10.22331/q-2020-02-27-235}
+  (\bibinfo{year}{2020}).
+
+\bibitem{PRXQuantum.2.040305}
+\bibinfo{author}{Chen, C.-F.}, \bibinfo{author}{Huang, H.-Y.},
+  \bibinfo{author}{Kueng, R.} \& \bibinfo{author}{Tropp, J.~A.}
+\newblock \bibinfo{journal}{\bibinfo{title}{Concentration for random product
+  formulas}}.
+\newblock {\emph{\JournalTitle{PRX Quantum}}} \textbf{\bibinfo{volume}{2}},
+  \bibinfo{pages}{040305}, \doiprefix\url{10.1103/PRXQuantum.2.040305}
+  (\bibinfo{year}{2021}).
+
+\bibitem{huang_2023}
+\bibinfo{author}{Huang, Y.}, \bibinfo{author}{Shao, Y.}, \bibinfo{author}{Ren,
+  W.}, \bibinfo{author}{Sun, J.} \& \bibinfo{author}{Lv, D.}
+\newblock \bibinfo{journal}{\bibinfo{title}{Efficient quantum imaginary time
+  evolution by drifting real-time evolution: An approach with low gate and
+  measurement complexity}}.
+\newblock {\emph{\JournalTitle{Journal of Chemical Theory and Computation}}}
+  \textbf{\bibinfo{volume}{19}}, \bibinfo{pages}{3868--3876},
+  \doiprefix\url{10.1021/acs.jctc.3c00071} (\bibinfo{year}{2023}).
+\newblock \eprint{https://doi.org/10.1021/acs.jctc.3c00071}.
+
+\bibitem{PhysRevResearch.6.013224}
+\bibinfo{author}{Pocrnic, M.}, \bibinfo{author}{Hagan, M.},
+  \bibinfo{author}{Carrasquilla, J.}, \bibinfo{author}{Segal, D.} \&
+  \bibinfo{author}{Wiebe, N.}
+\newblock \bibinfo{journal}{\bibinfo{title}{Composite qdrift-product formulas
+  for quantum and classical simulations in real and imaginary time}}.
+\newblock {\emph{\JournalTitle{Phys. Rev. Res.}}} \textbf{\bibinfo{volume}{6}},
+  \bibinfo{pages}{013224}, \doiprefix\url{10.1103/PhysRevResearch.6.013224}
+  (\bibinfo{year}{2024}).
+
+\bibitem{PhysRevA.109.062431}
+\bibinfo{author}{Cho, C.-H.}, \bibinfo{author}{Berry, D.~W.} \&
+  \bibinfo{author}{Hsieh, M.-H.}
+\newblock \bibinfo{journal}{\bibinfo{title}{Doubling the order of approximation
+  via the randomized product formula}}.
+\newblock {\emph{\JournalTitle{Phys. Rev. A}}} \textbf{\bibinfo{volume}{109}},
+  \bibinfo{pages}{062431}, \doiprefix\url{10.1103/PhysRevA.109.062431}
+  (\bibinfo{year}{2024}).
+
+\bibitem{martyn2024}
+\bibinfo{author}{Martyn, J.~M.} \& \bibinfo{author}{Rall, P.}
+\newblock \bibinfo{title}{Halving the cost of quantum algorithms with
+  randomization} (\bibinfo{year}{2024}).
+\newblock \eprint{2409.03744}.
+
+\bibitem{patel_2021}
+\bibinfo{author}{Patel, T.}, \bibinfo{author}{Younis, E.},
+  \bibinfo{author}{Iancu, C.}, \bibinfo{author}{de~Jong, W.} \&
+  \bibinfo{author}{Tiwari, D.}
+\newblock \bibinfo{title}{Robust and resource-efficient quantum circuit
+  approximation} (\bibinfo{year}{2021}).
+\newblock \eprint{2108.12714}.
+
+\bibitem{watrous_2018}
+\bibinfo{author}{Watrous, J.}
+\newblock \emph{\bibinfo{title}{The Theory of Quantum Information}}
+  (\bibinfo{publisher}{Cambridge University Press}, \bibinfo{year}{2018}).
+
+\bibitem{ross_sellinger}
+\bibinfo{author}{Ross, N.~J.} \& \bibinfo{author}{Selinger, P.}
+\newblock \bibinfo{title}{Optimal ancilla-free clifford+t approximation of
+  z-rotations} (\bibinfo{year}{2016}).
+\newblock \eprint{1403.2975}.
+
+\bibitem{Ueda_1996}
+\bibinfo{author}{Ueda, N.} \& \bibinfo{author}{Nakano, R.}
+\newblock \bibinfo{title}{Generalization error of ensemble estimators}.
+\newblock In \emph{\bibinfo{booktitle}{Proceedings of International Conference
+  on Neural Networks (ICNN'96)}}, vol.~\bibinfo{volume}{1},
+  \bibinfo{pages}{90--95 vol.1}, \doiprefix\url{10.1109/ICNN.1996.548872}
+  (\bibinfo{year}{1996}).
+
+\bibitem{Brown_20005}
+\bibinfo{author}{Brown, G.}, \bibinfo{author}{Wyatt, J.~L.} \&
+  \bibinfo{author}{Ti{\~n}o, P.}
+\newblock \bibinfo{journal}{\bibinfo{title}{Managing diversity in regression
+  ensembles}}.
+\newblock {\emph{\JournalTitle{Journal of Machine Learning Research}}}
+  \textbf{\bibinfo{volume}{6}}, \bibinfo{pages}{1621--1650}
+  (\bibinfo{year}{2005}).
+
+\bibitem{ntro}
+\bibinfo{author}{Davis, M.~G.}
+\newblock \emph{\bibinfo{title}{Numerical Synthesis of Arbitrary Multi-Qubit
+  Unitaries with low T-Count}}.
+\newblock Ph.D. thesis, \bibinfo{school}{Massachusetts Institute of Technology}
+  (\bibinfo{year}{2023}).
+\newblock \doiprefix\url{10.13140/RG.2.2.32303.30886}.
+
+\bibitem{leap}
+\bibinfo{author}{Smith, E.} \emph{et~al.}
+\newblock \bibinfo{journal}{\bibinfo{title}{Leap: Scaling numerical
+  optimization based synthesis using an incremental approach}}.
+\newblock {\emph{\JournalTitle{ACM Transactions on Quantum Computing}}}
+  \textbf{\bibinfo{volume}{4}}, \doiprefix\url{10.1145/3548693}
+  (\bibinfo{year}{2023}).
+
+\bibitem{qsearch}
+\bibinfo{author}{Davis, M.~G.} \emph{et~al.}
+\newblock \bibinfo{title}{Towards optimal topology aware quantum circuit
+  synthesis}.
+\newblock In \emph{\bibinfo{booktitle}{2020 IEEE International Conference on
+  Quantum Computing and Engineering (QCE)}}, \bibinfo{pages}{223--234},
+  \doiprefix\url{10.1109/QCE49297.2020.00036} (\bibinfo{year}{2020}).
+
+\end{thebibliography}

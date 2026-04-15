@@ -9,7 +9,7 @@ from tno_compiler.brickwall import (
     random_haar_gates, target_mpo, gates_to_unitary,
     partition_gates, layer_structure,
 )
-from tno_compiler.mpo_ops import quimb_mpo_to_arrays
+from tno_compiler.mpo_ops import matrix_to_mpo
 from tno_compiler.gradient import compute_cost_and_grad
 
 
@@ -27,8 +27,7 @@ def test_overlap_matches_exact(seed):
     target_gates = random_haar_gates(n, d, seed=seed)
     circuit_gates = random_haar_gates(n, d, seed=seed + 5000)
 
-    tmpo = target_mpo(target_gates, n, d)
-    target_arrays = quimb_mpo_to_arrays(tmpo)
+    target_arrays = target_mpo(target_gates, n, d)
 
     cost, _ = compute_cost_and_grad(target_arrays, circuit_gates, n, d)
 
@@ -49,8 +48,7 @@ def test_gradient_finite_difference(seed):
     target_gates = random_haar_gates(n, d, seed=seed)
     circuit_gates = random_haar_gates(n, d, seed=seed + 5000)
 
-    tmpo = target_mpo(target_gates, n, d)
-    target_arrays = quimb_mpo_to_arrays(tmpo)
+    target_arrays = target_mpo(target_gates, n, d)
 
     _, grad = compute_cost_and_grad(target_arrays, circuit_gates, n, d)
 

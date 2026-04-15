@@ -86,11 +86,15 @@ def unitary_to_mpo(U, n_qubits, max_bond=None):
     return mpo
 
 
-def target_mpo(gates, n_qubits, n_layers, max_bond=None, first_odd=True):
-    """Build the target MPO for compilation: stores V† (adjoint of the target).
+def target_mpo(gates, n_qubits, n_layers, first_odd=True):
+    """Build the target MPO for compilation: stores V† (adjoint).
 
-    The rqcopt convention computes Tr(MPO * circuit), so the MPO must
+    The rqcopt convention computes Tr(MPO · circuit), so the MPO must
     hold V† so that maximizing Re Tr(V† U) minimizes ‖V - U‖_F.
+
+    Uses rqcopt's matrix_to_mpo decomposition (not quimb) for index
+    compatibility with the merge/gradient einsums.
     """
+    from .mpo_ops import matrix_to_mpo
     V = gates_to_unitary(gates, n_qubits, n_layers, first_odd)
-    return unitary_to_mpo(V.conj().T, n_qubits, max_bond)
+    return matrix_to_mpo(V.conj().T)

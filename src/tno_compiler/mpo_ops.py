@@ -29,6 +29,39 @@ def quimb_mpo_to_arrays(mpo):
     return arrays
 
 
+def matrix_to_mpo(U):
+    """Decompose a 2^n x 2^n matrix into an MPO via successive SVDs.
+
+    Ported from rqcopt-mpo/tn_helpers.py: get_mpo_from_matrix.
+    Returns list of arrays with shape (bl, k, b, br).
+    """
+    n = int(round(np.log2(U.shape[0])))
+    A = U.reshape((2, 2) * n)
+
+    tensors = []
+    for site in range(1, n):
+        n_remaining = n - site + 1
+        if site == 1:
+            A = np.moveaxis(A, n_remaining, 1)
+        else:
+            A = np.moveaxis(A, n_remaining + 1, 2)
+
+        shape = A.shape
+        lim = 2 if site == 1 else 3
+        mat = A.reshape(int(np.prod(shape[:lim])), int(np.prod(shape[lim:])))
+
+        u, s, v = np.linalg.svd(mat, full_matrices=False)
+        tensors.append(u.reshape(shape[:lim] + (u.shape[-1],)))
+
+        A = (np.diag(s) @ v).reshape((u.shape[-1],) + shape[lim:])
+        if site == n - 1:
+            tensors.append(A)
+
+    tensors[0] = tensors[0][np.newaxis, ...]
+    tensors[-1] = tensors[-1][..., np.newaxis]
+    return tensors
+
+
 def trace_mpo(mpo_arrays):
     """Tr(MPO) from list of (bl, k, b, br) arrays."""
     traced = [np.einsum('iaaj->ij', T) for T in mpo_arrays]
@@ -74,8 +107,9 @@ def split_merged_tensor(T, canonical='left', max_bond=128):
     Left canonical: T1 is isometric. Right canonical: T2 is isometric.
     """
     assert T.ndim == 6
-    shape = T.shape
-    mat = T.reshape(shape[0] * shape[1] * shape[2],
+    A = np.moveaxis(T, 3, 2)  # reorder to (bl, k1, k2, b1, b2, br)
+    shape = A.shape
+    mat = A.reshape(shape[0] * shape[1] * shape[2],
                     shape[3] * shape[4] * shape[5])
 
     u, s, v = np.linalg.svd(mat, full_matrices=False)
@@ -110,17 +144,8 @@ def merge_gate_with_mpo_pair(gate, mpo1, mpo2, gate_is_left=True):
     k,b are the open (uncontracted) physical indices.
     """
     if gate_is_left:
-        # Gate below MPO in the closed TN for Tr(MPO · circuit).
-        # MPO stores V†. Contract V†'s lower indices with gate's ket indices.
-        # mpo1: (i=bl, a=upper0, b=lower0, d=bond)
-        # mpo2: (d=bond, c=upper1, e=lower1, k=br)
-        # gate: (b=ket0, e=ket1, g=bra0, h=bra1)
-        # Result: (bl, upper0, bra0, upper1, bra1, br)
-        return np.einsum('iabd,dcek,begh->iaghck', mpo1, mpo2, gate)
+        # rqcopt original einsum for merging gate below MPO pair.
+        return np.einsum('iabc,cdef,begh->iadghf', mpo1, mpo2, gate)
     else:
-        # Gate above MPO: contract MPO's upper with gate's bra.
-        # gate: (a=ket0, b=ket1, c=bra0, d=bra1)
-        # mpo1: (i=bl, e=upper0, f=lower0, g=bond) -- contract upper0=bra0 (e=c)
-        # mpo2: (g=bond, h=upper1, j=lower1, k=br) -- contract upper1=bra1 (h=d)
-        # Result: (bl, ket0, lower0, ket1, lower1, br)
-        return np.einsum('abcd,icfg,gdhk->iafbhk', gate, mpo1, mpo2)
+        # rqcopt original einsum for merging gate above MPO pair.
+        return np.einsum('abcd,icef,fdgh->iabegh', gate, mpo1, mpo2)

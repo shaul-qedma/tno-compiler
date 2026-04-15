@@ -1,0 +1,102 @@
+\begin{thebibliography}{10}
+\urlstyle{rm}
+\expandafter\ifx\csname url\endcsname\relax
+  \def\url#1{\texttt{#1}}\fi
+\expandafter\ifx\csname urlprefix\endcsname\relax\def\urlprefix{URL }\fi
+\expandafter\ifx\csname doiprefix\endcsname\relax\def\doiprefix{DOI: }\fi
+\providecommand{\bibinfo}[2]{#2}
+\providecommand{\eprint}[2][]{\url{#2}}
+
+\bibitem{rahman_2022}
+\bibinfo{author}{Rahman, S.~A.}, \bibinfo{author}{Lewis, R.},
+  \bibinfo{author}{Mendicelli, E.} \& \bibinfo{author}{Powell, S.}
+\newblock \bibinfo{journal}{\bibinfo{title}{Self-mitigating {Trotter} circuits
+  for {SU}(2) lattice gauge theory on a quantum computer}}.
+\newblock {\emph{\JournalTitle{Physical Review D}}}
+  \textbf{\bibinfo{volume}{106}}, \bibinfo{pages}{074502},
+  \doiprefix\url{10.1103/PhysRevD.106.074502} (\bibinfo{year}{2022}).
+\newblock \bibinfo{note}{ArXiv:2205.09247 [hep-lat]}.
+
+\bibitem{qiskit}
+\bibinfo{author}{Javadi-Abhari, A.} \emph{et~al.}
+\newblock \bibinfo{title}{Quantum computing with {Q}iskit},
+  \doiprefix\url{10.48550/arXiv.2405.08810} (\bibinfo{year}{2024}).
+\newblock \eprint{2405.08810}.
+
+\bibitem{jordan_wigner}
+\bibinfo{author}{Jordan, P.} \& \bibinfo{author}{Wigner, E.}
+\newblock \bibinfo{journal}{\bibinfo{title}{Uber das paulische
+  aquivalenzverbot}}.
+\newblock {\emph{\JournalTitle{Zeitschrift fur Physik}}}
+  \textbf{\bibinfo{volume}{47}}, \bibinfo{pages}{631--651},
+  \doiprefix\url{10.1007/BF01331938} (\bibinfo{year}{1928}).
+
+\bibitem{hartree_fock}
+\bibinfo{author}{Szabo, A.} \& \bibinfo{author}{Ostlund, N.~S.}
+\newblock \emph{\bibinfo{title}{Modern Quantum Chemistry: Introduction to
+  Advanced Electronic Structure Theory}} (\bibinfo{publisher}{Dover
+  Publications, Inc.}, \bibinfo{address}{Mineola}, \bibinfo{year}{1996}),
+  \bibinfo{edition}{first} edn.
+
+\bibitem{draper}
+\bibinfo{author}{Draper, T.~G.}
+\newblock \bibinfo{title}{Addition on a quantum computer}
+  (\bibinfo{year}{2000}).
+\newblock \eprint{quant-ph/0008033}.
+
+\bibitem{brassard}
+\bibinfo{author}{Brassard, G.}, \bibinfo{author}{Hoyer, P.},
+  \bibinfo{author}{Mosca, M.} \& \bibinfo{author}{Tapp, A.}
+\newblock \bibinfo{title}{Quantum {Amplitude} {Amplification} and
+  {Estimation}}.
+\newblock vol. \bibinfo{volume}{305}, \bibinfo{pages}{53--74},
+  \doiprefix\url{10.1090/conm/305/05215} (\bibinfo{year}{2002}).
+\newblock \bibinfo{note}{ArXiv:quant-ph/0005055}.
+
+\bibitem{qasm_bench}
+\bibinfo{author}{Li, A.}, \bibinfo{author}{Stein, S.},
+  \bibinfo{author}{Krishnamoorthy, S.} \& \bibinfo{author}{Ang, J.}
+\newblock \bibinfo{journal}{\bibinfo{title}{Qasmbench: A low-level quantum
+  benchmark suite for nisq evaluation and simulation}}.
+\newblock {\emph{\JournalTitle{ACM Transactions on Quantum Computing}}}
+  (\bibinfo{year}{2022}).
+
+\bibitem{PhysRevA.95.042306}
+\bibinfo{author}{Campbell, E.}
+\newblock \bibinfo{journal}{\bibinfo{title}{Shorter gate sequences for quantum
+  computing by mixing unitaries}}.
+\newblock {\emph{\JournalTitle{Phys. Rev. A}}} \textbf{\bibinfo{volume}{95}},
+  \bibinfo{pages}{042306}, \doiprefix\url{10.1103/PhysRevA.95.042306}
+  (\bibinfo{year}{2017}).
+
+\bibitem{Ueda_1996}
+\bibinfo{author}{Ueda, N.} \& \bibinfo{author}{Nakano, R.}
+\newblock \bibinfo{title}{Generalization error of ensemble estimators}.
+\newblock In \emph{\bibinfo{booktitle}{Proceedings of International Conference
+  on Neural Networks (ICNN'96)}}, vol.~\bibinfo{volume}{1},
+  \bibinfo{pages}{90--95 vol.1}, \doiprefix\url{10.1109/ICNN.1996.548872}
+  (\bibinfo{year}{1996}).
+
+\bibitem{Brown_20005}
+\bibinfo{author}{Brown, G.}, \bibinfo{author}{Wyatt, J.~L.} \&
+  \bibinfo{author}{Ti{\~n}o, P.}
+\newblock \bibinfo{journal}{\bibinfo{title}{Managing diversity in regression
+  ensembles}}.
+\newblock {\emph{\JournalTitle{Journal of Machine Learning Research}}}
+  \textbf{\bibinfo{volume}{6}}, \bibinfo{pages}{1621--1650}
+  (\bibinfo{year}{2005}).
+
+\bibitem{watrous_2018}
+\bibinfo{author}{Watrous, J.}
+\newblock \emph{\bibinfo{title}{The Theory of Quantum Information}}
+  (\bibinfo{publisher}{Cambridge University Press}, \bibinfo{year}{2018}).
+
+\bibitem{tropp_2015}
+\bibinfo{author}{Tropp, J.~A.}
+\newblock \bibinfo{journal}{\bibinfo{title}{An introduction to matrix
+  concentration inequalities}}.
+\newblock {\emph{\JournalTitle{Found. Trends Mach. Learn.}}}
+  \textbf{\bibinfo{volume}{8}}, \bibinfo{pages}{1–230},
+  \doiprefix\url{10.1561/2200000048} (\bibinfo{year}{2015}).
+
+\end{thebibliography}

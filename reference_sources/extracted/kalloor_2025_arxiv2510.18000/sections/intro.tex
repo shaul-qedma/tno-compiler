@@ -1,0 +1,93 @@
+
+\noindent Large-scale quantum computers have the potential to revolutionize
+scientific and engineering computations. Critical to realizing
+this potential is the compilation of a quantum
+algorithm into a circuit composed of operations natively executable on a quantum computer, and subsequent optimization of this circuit taking into account constraints of the target hardware. These steps must be done for circuits operating on hundreds and thousands of qubits for applications of impact. We refer to this
+as \emph{application scale} quantum circuit compilation and optimization. 
+
+Compiled quantum circuits nearly always \emph{approximate} a target unitary prescribed by the quantum algorithm for multiple reasons. 
+Firstly, utilizing approximate circuits
+in order to reduce circuit depth, especially reductions in expensive
+or noisy gates, is often desirable. In the near-term intermediate scale (NISQ) \cite{Preskill2018_NISQ} regime this is a
+strategy to increase solution accuracy, while in the
+fault-tolerant (FT) regime arbitrary angle rotations \emph{must be}
+approximated via a fixed gate-set, and moreover, identifying and
+removing insignificant but expensive gates (\eg very small angle
+controlled rotations) is a strategy to increase circuit efficiency and
+reduce execution time. Secondly, on the theoretical side, exact
+circuit compilations are NP-hard to generate with increasing circuit
+width \cite{botea2018complexity}, and thus approximations are likely
+the best route to scalability.
+
+While there exist many quantum circuit compilation tools \cite{qiskit,bqskit,tket,cirq,qdrift},
+none are suitable for application scale compilation, which requires
+efficient compilation of circuits with controllable approximations, acting on hundreds and thousands of
+qubits. As quantum computing moves from the NISQ
+era to early fault-tolerant \cite{PRXQuantum.5.020101} and ultimately full FT devices,
+compilation and optimization must evolve to incorporate systematic
+approximation mechanisms. Several challenges must be addressed: (i) {\it Quality of optimization:} circuit optimization must balance resource efficiency against approximation error, with tunable cost objectives; (ii) {\it Generality:} approximations must apply to circuits represented at multiple abstraction levels; NISQ-era, continuously parameterized gates and discrete FT gate sets such as Clifford+T; (iii) {\it Soundness;} approximation methods must rest on rigorously proven principles; (iv) {\it Rigorous guarantees:} optimized approximate compilations must come with guarantees on approximation error; and (v) {\it Scalability;} as mentioned above, circuit compilation and optimization tools must address application scale circuits. 
+
+To meet these challenges, we develop and demonstrate an application scale quantum
+circuit compilation and optimization workflow. Given an idealized or textbook circuit
+expressed in either parameterized or discrete gates, our method
+outputs an \emph{ensemble} of approximate compilations tailored to a
+target device specification. The method supports arbitrary target error
+levels and program execution consists of sampling circuits from the
+ensemble and averaging measurement outcomes. This averaging defines a
+quantum channel, and we derive rigorous error bounds for this channel
+relative to the target unitary.
+
+Our approach combines three main ingredients: (i) partitioning the
+input circuit into non-overlapping subcircuits using binning
+techniques that group adjacent gates into fixed-size blocks, (ii)
+approximate compilation of each partition into an ensemble of
+circuits, and (iii) optimization of the ensembles to guarantee circuit
+output accuracy. The classical overhead of all steps scales
+polynomially with circuit width and depth.
+
+While these ingredients have been individually explored in previous work, their
+integration into a complete, practical compilation workflow is our
+main contribution. Circuit partitioning as a divide-and-conquer
+strategy was previously proposed in Refs.~\cite{wu_qgo,Burt_2024}, but
+these works neither analyzed approximation error nor established
+output error guarantees.
+
+The idea of ensemble averaging to reduce output error originates with
+Campbell~\cite{PhysRevA.95.042306} and
+Hastings~\cite{hastings2016turning}, who showed that properly designed
+ensembles can suppress worst-case error quadratically
+($\epsilon \rightarrow \epsilon^2$). Their methods, however, were
+demonstrated only for single-qubit gates and relied on bespoke
+compilation techniques (\eg Campbell's ensemble is
+specified in terms of the Hamiltonians generating the gates or
+circuits \cite{PhysRevA.95.042306}). Following this work, the insight
+that averaging over several compilations of a circuit or gate can
+reduce error has been applied in several contexts.  It has been
+applied to generate randomized single qubit gate compilation
+protocols \cite{Kliuchnikov_2023,Akibu_ACM_2024,yoshioka2024errorcrafting},
+to define randomized versions of state preparation
+circuits \cite{Akibue2024}, to randomize specific computational
+primitives \cite{low2021halving}, and specific quantum algorithms,
+such as product formula-based quantum
+simulation \cite{campbell_qdrift,
+Ouyang2020compilation,PRXQuantum.2.040305,huang_2023,PhysRevResearch.6.013224,PhysRevA.109.062431}
+and quantum signal processing-based quantum
+simulation \cite{martyn2024}.  Prior work by some of the authors
+integrated circuit partitioning, synthesis, and
+ensembles~\cite{patel_2021}, but lacked application-level scalability,
+was primarily empirical, and did not derive worst-case error bounds or
+methods for ensemble optimization.
+
+In this work, we integrate theoretical results on error reduction
+through circuit ensembles with practical compilation tools, producing
+a scalable framework for compiling and optimizing quantum circuit ensembles with
+rigorous worst-case output error guarantees.
+
+
+
+
+
+
+
+
+

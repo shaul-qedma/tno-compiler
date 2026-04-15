@@ -1,0 +1,24 @@
+{
+   "stamp" : true,
+   "sources" : [
+      {
+         "usage" : "toplevel",
+         "filename" : "main_Quantum.tex"
+      },
+      {
+         "usage" : "ignore",
+         "filename" : "main.bib"
+      },
+      {
+         "usage" : "ignore",
+         "filename" : "quantum-bibliographystyle-demo.bib"
+      },
+      {
+         "usage" : "ignore",
+         "filename" : "quantum.bst"
+      }
+   ],
+   "process" : {
+      "compiler" : "pdflatex"
+   }
+}

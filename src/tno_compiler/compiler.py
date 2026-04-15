@@ -6,7 +6,7 @@ brickwall gates maximizing |Tr(V†U)|² via Riemannian ADAM on U(4).
 
 import numpy as np
 from .brickwall import total_gates, partition_gates
-from .mpo_ops import quimb_mpo_to_arrays
+from .mpo_ops import matrix_to_mpo
 from .gradient import compute_cost_and_grad
 from .optim import riemannian_adam
 
@@ -30,7 +30,7 @@ def compile_circuit(target_mpo, n_qubits, n_layers, max_bond=128,
         gates: list of (2,2,2,2) numpy arrays.
         cost_history: list of costs.
     """
-    target_arrays = quimb_mpo_to_arrays(target_mpo)
+    target_arrays = target_mpo  # already a list of arrays
 
     if init_gates is None:
         ng = total_gates(n_qubits, n_layers, first_odd)

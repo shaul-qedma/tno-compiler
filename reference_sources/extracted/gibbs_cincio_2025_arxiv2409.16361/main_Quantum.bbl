@@ -1,0 +1,334 @@
+\begin{thebibliography}{10}
+
+\bibitem{feynman1982simulating}
+Richard~P. Feynman.
+\newblock ``Simulating physics with computers''.
+\newblock \href{https://dx.doi.org/10.1007/BF02650179}{International Journal of
+  Theoretical Physics {\bf 21}, 467--488}~(1982).
+
+\bibitem{kim2023evidence}
+Youngseok Kim, Andrew Eddins, Sajant Anand, Ken~Xuan Wei, Ewout Van Den~Berg,
+  Sami Rosenblatt, Hasan Nayfeh, Yantao Wu, Michael Zaletel, Kristan Temme,
+  et~al.
+\newblock ``Evidence for the utility of quantum computing before fault
+  tolerance''.
+\newblock \href{https://dx.doi.org/10.1038/s41586-023-06096-3}{Nature {\bf
+  618}, 500--505}~(2023).
+
+\bibitem{berg2022probabilistic}
+Ewout Van Den~Berg, Zlatko~K Minev, Abhinav Kandala, and Kristan Temme.
+\newblock ``Probabilistic error cancellation with sparse pauli--lindblad models
+  on noisy quantum processors''.
+\newblock \href{https://dx.doi.org/10.1038/s41567-023-02042-2}{Nature
+  PhysicsPages 1--6}~(2023).
+
+\bibitem{schollwock2011density}
+Ulrich Schollw{\"o}ck.
+\newblock ``The density-matrix renormalization group in the age of matrix
+  product states''.
+\newblock Annals of physics {\bf 326}, 96--192~(2011).
+\newblock
+  url:~\url{https://www.sciencedirect.com/science/article/pii/S0003491610001752?via%3Dihub}.
+
+\bibitem{lloyd1996universal}
+Seth Lloyd.
+\newblock ``Universal quantum simulators''.
+\newblock \href{https://dx.doi.org/10.1126/science.273.5278.1073}{SciencePages
+  1073--1078}~(1996).
+
+\bibitem{childs2021theory}
+Andrew~M Childs, Yuan Su, Minh~C Tran, Nathan Wiebe, and Shuchen Zhu.
+\newblock ``Theory of trotter error with commutator scaling''.
+\newblock
+  \href{https://dx.doi.org/https://doi.org/10.1103/PhysRevX.11.011020}{Physical
+  Review X {\bf 11}, 011020}~(2021).
+
+\bibitem{preskill2018quantum}
+John Preskill.
+\newblock ``Quantum computing in the {NISQ} era and beyond''.
+\newblock \href{https://dx.doi.org/10.22331/q-2018-08-06-79}{Quantum {\bf 2},
+  79}~(2018).
+
+\bibitem{cerezo2020variationalreview}
+M.~Cerezo, Andrew Arrasmith, Ryan Babbush, Simon~C Benjamin, Suguru Endo,
+  Keisuke Fujii, Jarrod~R McClean, Kosuke Mitarai, Xiao Yuan, Lukasz Cincio,
+  and Patrick~J. Coles.
+\newblock ``Variational quantum algorithms''.
+\newblock \href{https://dx.doi.org/10.1038/s42254-021-00348-9}{Nature Reviews
+  Physics {\bf 3}, 625–644}~(2021).
+
+\bibitem{berthusen2022quantum}
+Noah~F. Berthusen, Tha\'{\i}s~V. Trevisan, Thomas Iadecola, and Peter~P. Orth.
+\newblock ``Quantum dynamics simulations beyond the coherence time on noisy
+  intermediate-scale quantum hardware by variational trotter compression''.
+\newblock \href{https://dx.doi.org/10.1103/PhysRevResearch.4.023097}{Phys. Rev.
+  Res. {\bf 4}, 023097}~(2022).
+
+\bibitem{mizuta2022local}
+Kaoru Mizuta, Yuya~O Nakagawa, Kosuke Mitarai, and Keisuke Fujii.
+\newblock ``Local variational quantum compilation of large-scale {H}amiltonian
+  dynamics''.
+\newblock \href{https://dx.doi.org/10.1103/PRXQuantum.3.040302}{PRX Quantum
+  {\bf 3}, 040302}~(2022).
+
+\bibitem{bilkis2021semi}
+Matias Bilkis, M~Cerezo, Guillaume Verdon, Patrick~J Coles, and Lukasz Cincio.
+\newblock ``A semi-agnostic ansatz with variable structure for variational
+  quantum algorithms''.
+\newblock \href{https://dx.doi.org/10.1007/s42484-023-00132-1}{Quantum Machine
+  Intelligence {\bf 5}, 43}~(2023).
+
+\bibitem{khatri2019quantum}
+Sumeet Khatri, Ryan LaRose, Alexander Poremba, Lukasz Cincio, Andrew~T
+  Sornborger, and Patrick~J Coles.
+\newblock ``Quantum-assisted quantum compiling''.
+\newblock \href{https://dx.doi.org/10.22331/q-2019-05-13-140}{Quantum {\bf 3},
+  140}~(2019).
+
+\bibitem{caro2021generalization}
+Matthias~C Caro, Hsin-Yuan Huang, M~Cerezo, Kunal Sharma, Andrew Sornborger,
+  Lukasz Cincio, and Patrick~J Coles.
+\newblock ``Generalization in quantum machine learning from few training
+  data''.
+\newblock \href{https://dx.doi.org/10.1038/s41467-022-32550-3}{Nature
+  {C}ommunications{\bf 13}}~(2022).
+
+\bibitem{caro2022outofdistribution}
+Matthias~C Caro, Hsin-Yuan Huang, Nicholas Ezzell, Joe Gibbs, Andrew~T
+  Sornborger, Lukasz Cincio, Patrick~J Coles, and Zo{\"e} Holmes.
+\newblock ``Out-of-distribution generalization for learning quantum dynamics''.
+\newblock \href{https://dx.doi.org/10.1038/s41467-023-39381-w}{Nature
+  Communications {\bf 14}, 3751}~(2023).
+
+\bibitem{gibbs2024dynamical}
+Joe Gibbs, Zoe Holmes, Matthias~C Caro, Nicholas Ezzell, Hsin-Yuan Huang,
+  Lukasz Cincio, Andrew~T Sornborger, and Patrick~J Coles.
+\newblock ``Dynamical simulation via quantum machine learning with provable
+  generalization''.
+\newblock \href{https://dx.doi.org/10.1103/PhysRevResearch.6.013241}{Physical
+  Review Research {\bf 6}, 013241}~(2024).
+
+\bibitem{mcclean2018barren}
+Jarrod~R McClean, Sergio Boixo, Vadim~N Smelyanskiy, Ryan Babbush, and Hartmut
+  Neven.
+\newblock ``Barren plateaus in quantum neural network training landscapes''.
+\newblock \href{https://dx.doi.org/10.1038/s41467-018-07090-4}{Nature
+  {C}ommunications {\bf 9}, 1--6}~(2018).
+
+\bibitem{larocca2024review}
+Martin Larocca, Supanut Thanasilp, Samson Wang, Kunal Sharma, Jacob Biamonte,
+  Patrick~J Coles, Lukasz Cincio, Jarrod~R McClean, Zo{\"e} Holmes, and
+  M~Cerezo.
+\newblock ``A review of barren plateaus in variational quantum computing''.
+\newblock \href{https://dx.doi.org/10.1038/s42254-025-00813-9}{Nature Reviews
+  Physics {\bf 3}, 625–644}~(2025).
+
+\bibitem{anschuetz2022quantum}
+Eric~R Anschuetz and Bobak~T Kiani.
+\newblock ``Quantum variational algorithms are swamped with traps''.
+\newblock \href{https://dx.doi.org/10.1038/s41467-022-35364-5}{Nature
+  Communications {\bf 13}, 7760}~(2022).
+
+\bibitem{orus2014practical}
+Rom{\'a}n Or{\'u}s.
+\newblock ``A practical introduction to tensor networks: Matrix product states
+  and projected entangled pair states''.
+\newblock \href{https://dx.doi.org/10.1016/j.aop.2014.06.013}{Annals of Physics
+  {\bf 349}, 117--158}~(2014).
+
+\bibitem{pan2022simulation}
+Feng Pan and Pan Zhang.
+\newblock ``Simulation of quantum circuits using the big-batch tensor network
+  method''.
+\newblock \href{https://dx.doi.org/10.1103/PhysRevLett.128.030501}{Physical
+  Review Letters {\bf 128}, 030501}~(2022).
+
+\bibitem{tindall2023efficient}
+Joseph Tindall, Matthew Fishman, E.~Miles Stoudenmire, and Dries Sels.
+\newblock ``Efficient tensor network simulation of {IBM}’s {E}agle kicked
+  {I}sing experiment''.
+\newblock \href{https://dx.doi.org/10.1103/PRXQuantum.5.010308}{PRX Quantum
+  {\bf 5}, 010308}~(2024).
+
+\bibitem{mcculloch2007density}
+Ian~P McCulloch.
+\newblock ``From density-matrix renormalization group to matrix product
+  states''.
+\newblock \href{https://dx.doi.org/10.1088/1742-5468/2007/10/P10014}{Journal of
+  Statistical Mechanics: Theory and Experiment {\bf 2007}, P10014}~(2007).
+
+\bibitem{rudolph2022decomposition}
+Manuel~S Rudolph, Jing Chen, Jacob Miller, Atithi Acharya, and Alejandro
+  Perdomo-Ortiz.
+\newblock ``Decomposition of matrix product states into shallow quantum
+  circuits''.
+\newblock Quantum Science and Technology {\bf 9}, 015012~(2023).
+\newblock
+  url:~\url{https://iopscience.iop.org/article/10.1088/2058-9565/ad04e6}.
+
+\bibitem{rudolph2022synergy}
+Manuel~S Rudolph, Jacob Miller, Danial Motlagh, Jing Chen, Atithi Acharya, and
+  Alejandro Perdomo-Ortiz.
+\newblock ``Synergistic pretraining of parametrized quantum circuits via tensor
+  networks''.
+\newblock \href{https://dx.doi.org/10.1038/s41467-023-43908-6}{Nature
+  Communications {\bf 14}, 8367}~(2023).
+
+\bibitem{dborin2022matrix}
+James Dborin, Fergus Barratt, Vinul Wimalaweera, Lewis Wright, and Andrew~G
+  Green.
+\newblock ``Matrix product state pre-training for quantum machine learning''.
+\newblock \href{https://dx.doi.org/10.1088/2058-9565/ac7073}{Quantum Science
+  and Technology {\bf 7}, 035014}~(2022).
+
+\bibitem{jamet2023anderson}
+Francois Jamet, Connor Lenihan, Lachlan~P Lindoy, Abhishek Agarwal, Enrico
+  Fontana, Baptiste~Anselme Martin, and Ivan Rungger.
+\newblock ``Anderson impurity solver integrating tensor network methods with
+  quantum computing''~(2023).
+\newblock  url:~\url{https://arxiv.org/abs/2304.06587}.
+
+\bibitem{rogerson2024quantum}
+David Rogerson and Ananda Roy.
+\newblock ``Quantum circuit optimization using differentiable programming of
+  tensor network states''~(2024).
+\newblock  url:~\url{https://arxiv.org/abs/2408.12583}.
+
+\bibitem{anselme2024combining}
+Baptiste Anselme~Martin, Thomas Ayral, Fran{\c{c}}ois Jamet, Marko~J
+  Ran{\v{c}}i{\'c}, and Pascal Simon.
+\newblock ``Combining matrix product states and noisy quantum computers for
+  quantum simulation''.
+\newblock \href{https://dx.doi.org/10.1103/PhysRevA.109.062437}{Physical Review
+  A {\bf 109}, 062437}~(2024).
+
+\bibitem{lin2021real}
+Sheng-Hsuan Lin, Rohit Dilip, Andrew~G Green, Adam Smith, and Frank Pollmann.
+\newblock ``Real-and imaginary-time evolution with compressed quantum
+  circuits''.
+\newblock \href{https://dx.doi.org/10.1103/PRXQuantum.2.010342}{PRX Quantum
+  {\bf 2}, 010342}~(2021).
+
+\bibitem{robertson2024tensor}
+Niall~F Robertson, Bibek Pokharel, Bryce Fuller, Eric Switzer, Oles Shtanko,
+  Mirko Amico, Adam Byrne, Andrea D'Urbano, Salome Hayes-Shuptar, Albert
+  Akhriev, et~al.
+\newblock ``Tensor network enhanced dynamic multiproduct formulas''~(2024).
+\newblock  url:~\url{https://arxiv.org/abs/2407.17405}.
+
+\bibitem{mansuroglu2023variational}
+Refik Mansuroglu, Timo Eckstein, Ludwig N{\"u}tzel, Samuel~A Wilkinson, and
+  Michael~J Hartmann.
+\newblock ``Variational {H}amiltonian simulation for translational invariant
+  systems via classical pre-processing''.
+\newblock \href{https://dx.doi.org/10.1088/2058-9565/acb1d0}{Quantum Science
+  and Technology {\bf 8}, 025006}~(2023).
+
+\bibitem{kotil2024riemannian}
+Ayse Kotil, Rahul Banerjee, Qunsheng Huang, and Christian~B Mendl.
+\newblock ``Riemannian quantum circuit optimization for hamiltonian
+  simulation''.
+\newblock \href{https://dx.doi.org/10.1088/1751-8121/ad2d6e}{Journal of Physics
+  A: Mathematical and Theoretical {\bf 57}, 135303}~(2024).
+
+\bibitem{causer2023scalable}
+Luke Causer, Felix Jung, Asimpunya Mitra, Frank Pollmann, and Adam
+  Gammon-Smith.
+\newblock ``Scalable simulation of nonequilibrium quantum dynamics via
+  classically optimized unitary circuits''.
+\newblock \href{https://dx.doi.org/10.1103/PhysRevResearch.6.033062}{Physical
+  Review Research {\bf 6}, 033062}~(2024).
+
+\bibitem{mc2023classically}
+Conor Mc~Keever and Michael Lubasch.
+\newblock ``Classically optimized {H}amiltonian simulation''.
+\newblock \href{https://dx.doi.org/10.1103/PhysRevResearch.5.023146}{Physical
+  review research {\bf 5}, 023146}~(2023).
+
+\bibitem{mc2024towards}
+Conor Mc~Keever and Michael Lubasch.
+\newblock ``Towards adiabatic quantum computing using compressed quantum
+  circuits''.
+\newblock \href{https://dx.doi.org/10.1103/PRXQuantum.5.020362}{PRX Quantum
+  {\bf 5}, 020362}~(2024).
+
+\bibitem{tepaske2023optimal}
+Maurits~SJ Tepaske, Dominik Hahn, and David~J Luitz.
+\newblock ``Optimal compression of quantum many-body time evolution operators
+  into brickwall circuits''.
+\newblock \href{https://dx.doi.org/10.21468/SciPostPhys.14.4.073}{SciPost
+  Physics {\bf 14}, 073}~(2023).
+
+\bibitem{tepaske2024optimal}
+Maurits~SJ Tepaske, David~J Luitz, and Dominik Hahn.
+\newblock ``Optimal compression of constrained quantum time evolution''.
+\newblock \href{https://dx.doi.org/10.1103/PhysRevB.109.205134}{Physical Review
+  B {\bf 109}, 205134}~(2024).
+
+\bibitem{evenbly2009algorithms}
+Glen Evenbly and Guifr{\'e} Vidal.
+\newblock ``Algorithms for entanglement renormalization''.
+\newblock \href{https://dx.doi.org/10.1103/PhysRevB.79.144108}{Physical Review
+  B—Condensed Matter and Materials Physics {\bf 79}, 144108}~(2009).
+
+\bibitem{kukliansky2023qfactor}
+Alon Kukliansky, Ed~Younis, Lukasz Cincio, and Costin Iancu.
+\newblock ``Qfactor: A domain-specific optimizer for quantum circuit
+  instantiation''.
+\newblock In 2023 IEEE International Conference on Quantum Computing and
+  Engineering (QCE).
+\newblock \href{https://dx.doi.org/10.1109/QCE57702.2023.00096}{Volume~1, pages
+  814--824}.
+\newblock IEEE~(2023).
+
+\bibitem{shirakawa2021automatic}
+Tomonori Shirakawa, Hiroshi Ueda, and Seiji Yunoki.
+\newblock ``Automatic quantum circuit encoding of a given arbitrary quantum
+  state''~(2021).
+\newblock  url:~\url{https://arxiv.org/abs/2112.14524}.
+
+\bibitem{kukliansky2024leveraging}
+Alon Kukliansky, Lukasz Cincio, Ed~Younis, and Costin Iancu.
+\newblock ``Leveraging quantum machine learning generalization to significantly
+  speed-up quantum compilation''~(2024).
+\newblock  url:~\url{https://arxiv.org/abs/2405.12866}.
+
+\bibitem{tucci2005introduction}
+Robert~R. Tucci.
+\newblock ``An {Introduction} to {Cartan}'s {KAK} {Decomposition} for {QC}
+  {Programmers}''~(2005).
+\newblock  url:~\url{http://arxiv.org/abs/quant-ph/0507171}.
+
+\bibitem{stoudenmire2010minimally}
+EM~Stoudenmire and Steven~R White.
+\newblock ``Minimally entangled typical thermal state algorithms''.
+\newblock \href{https://dx.doi.org/10.1088/1367-2630/12/5/055026}{New Journal
+  of Physics {\bf 12}, 055026}~(2010).
+
+\bibitem{van2024efficient}
+Maarten Van~Damme, Jutho Haegeman, Ian McCulloch, and Laurens Vanderstraeten.
+\newblock ``Efficient higher-order matrix product operators for time
+  evolution''.
+\newblock \href{https://dx.doi.org/10.21468/SciPostPhys.17.5.135}{SciPost
+  Physics {\bf 17}, 135}~(2024).
+
+\bibitem{zaletel2015time}
+Michael~P Zaletel, Roger~SK Mong, Christoph Karrasch, Joel~E Moore, and Frank
+  Pollmann.
+\newblock ``Time-evolving a matrix product state with long-ranged
+  interactions''.
+\newblock \href{https://dx.doi.org/10.1103/PhysRevB.91.165112}{Physical Review
+  B {\bf 91}, 165112}~(2015).
+
+\bibitem{luchnikov2021riemannian}
+Ilia~A Luchnikov, Mikhail~E Krechetov, and Sergey~N Filippov.
+\newblock ``Riemannian geometry and automatic differentiation for optimization
+  problems of quantum physics and quantum technologies''.
+\newblock \href{https://dx.doi.org/10.1088/1367-2630/ac0b02}{New Journal of
+  Physics {\bf 23}, 073006}~(2021).
+
+\bibitem{TensorOperations.jl}
+L.~Devos, M.~Van~Damme, J.~Haegeman, and contributors.
+\newblock ``Tensoroperations.jl''~(2023).
+
+\end{thebibliography}

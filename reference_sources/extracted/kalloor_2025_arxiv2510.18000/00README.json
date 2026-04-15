@@ -1,0 +1,41 @@
+{
+   "sources" : [
+      {
+         "usage" : "toplevel",
+         "filename" : "main.tex"
+      },
+      {
+         "usage" : "toplevel",
+         "filename" : "si.tex"
+      },
+      {
+         "usage" : "ignore",
+         "filename" : "jabbrv-ltwa-all.ldf"
+      },
+      {
+         "usage" : "ignore",
+         "filename" : "jabbrv-ltwa-en.ldf"
+      },
+      {
+         "usage" : "ignore",
+         "filename" : "jabbrv.sty"
+      },
+      {
+         "usage" : "ignore",
+         "filename" : "naturemag-doi.bst"
+      },
+      {
+         "usage" : "ignore",
+         "filename" : "refs.bbl"
+      },
+      {
+         "usage" : "ignore",
+         "filename" : "refs.bib"
+      }
+   ],
+   "spec_version" : 1,
+   "texlive_version" : "2025",
+   "process" : {
+      "compiler" : "pdflatex"
+   }
+}

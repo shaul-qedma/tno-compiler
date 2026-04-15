@@ -1,0 +1,92 @@
+\documentclass[fleqn,10pt,twocolumn]{wlscirep}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{wrapfig}
+\usepackage{subcaption}
+\usepackage{multirow}
+\usepackage{multicol}
+\usepackage{tikz}
+
+\newcommand{\eg}{\emph{e.g.,~}}
+\newcommand{\ie}{\emph{i.e.,~}}
+\newcommand{\bx}{\mathbf{x}}
+\newcommand{\by}{\mathbf{y}}
+\newcommand{\bp}{\mathbf{p}}
+\newcommand{\hx}{\hat{x}}
+\newcommand{\hp}{\hat{p}}
+\newcommand{\ket}[1]{\vert#1\rangle}
+\newcommand{\bra}[1]{\langle #1\vert}
+\newcommand{\expect}[1]{\langle #1\rangle}
+\newcommand{\dg}{^\dagger}
+\newcommand{\nn}{\nonumber}
+\newcommand{\pr}{{\rm Pr}}
+
+\newcommand{\normf}[1]{\left\lVert #1 \right\rVert_F}
+\newcommand{\normo}[1]{\left\lVert #1 \right\rVert}
+\newcommand{\normt}[1]{\left\lVert #1 \right\rVert_1}
+\newcommand{\normd}[1]{\left\lVert #1 \right\rVert_\diamond}
+\newcommand{\E}[1]{\mathbb{E}\left\{ #1 \right\}}
+
+\newcommand{\tr}{{\rm tr}}
+\renewcommand{\k}{{(k)}}
+\newcommand{\p}{{\bf\sf p}}
+\newcommand{\braket}[2]{\langle #1 \vert #2 \rangle}
+
+\newcommand*{\QED}{\null\nobreak\hfill\ensuremath{\blacksquare}}%
+
+\newcommand{\red}[1]{{\color{red}#1}} 
+\newcommand{\needcite}{{\color{red}[XX]~}}
+\long\def\comment#1{}
+\long\def\note#1{{\em #1 }}
+\def\parah#1{\vspace*{0.0in} \noindent{\bf #1:}}
+
+\title{Application Scale Quantum Circuit Compilation with Controlled Error}
+
+\author[1,2,*]{Justin Kalloor}
+\author[3]{Lucas Kovalsky}
+\author[1,2]{Mathias Weiden}
+\author[2]{John Kubiatowicz}
+\author[1]{Ed Younis}
+\author[1]{Costin Iancu}
+\author[3,+]{Mohan Sarovar}
+\affil[1]{Computational Research Division, Lawrence Berkeley National Laboratory, Berkeley, CA, 94702, USA}
+\affil[2]{Department of Electrical Engineering and Computer Science, University of California, Berkeley, CA, 94702, USA}
+\affil[3]{Quantum Algorithms and Applications Collaboratory, Sandia National Laboratories, Livermore, CA, 94550, USA}
+
+\affil[*]{jkalloor3@berkeley.edu}
+\affil[+]{mnsarov@sandia.gov}
+
+\begin{abstract}
+Compilation and optimization of quantum circuits are critical components in the execution of algorithms on quantum computers. These components must successfully balance two competing priorities: minimizing the number of expensive resources, such as two-qubit gates or arbitrary angle single-qubit rotations, and minimizing the approximation error of the compiled circuit to the ideal target unitary describing the quantum algorithm. We develop a practical workflow for managing and optimizing this tradeoff, which enables quantum circuit compilation and optimization at scales of hundreds of qubits. Our workflow is able to tackle circuits at such large scales while providing rigorous guarantees on circuit output error by leveraging circuit partitioning and the notion of averaging over circuit ensembles. We demonstrate our workflow on several benchmark algorithmic circuits acting on up to 380 qubits, and show that it can simultaneously achieve substantial reductions in resource-intensive gates and control output errors, offering a practical and scalable strategy for both near-term and fault-tolerant quantum computing.
+\end{abstract}
+
+\begin{document}
+
+\flushbottom
+\maketitle
+
+\thispagestyle{empty}
+
+
+\input{sections/intro}
+
+
+\section*{Results}
+
+\input{sections/results}
+
+\section*{Discussion}
+
+\input{sections/discussion.tex}
+
+\section*{Methods}
+\input{sections/methods}
+
+\input{main.bbl}
+
+\section*{Acknowledgments}
+
+\input{sections/ack}
+
+
+\end{document}

@@ -1,0 +1,1016 @@
+\begin{thebibliography}{100}
+
+\bibitem{reiher_femoco_2017}
+Markus Reiher, Nathan Wiebe, Krysta~M. Svore, Dave Wecker, and Matthias Troyer.
+\newblock Elucidating reaction mechanisms on quantum computers.
+\newblock {\em Proceedings of the National Academy of Sciences},
+  114(29):7555--7560, 2017.
+
+\bibitem{vonburg_2021}
+Vera von Burg, Guang~Hao Low, Thomas H\"aner, Damian~S. Steiger, Markus Reiher,
+  Martin Roetteler, and Matthias Troyer.
+\newblock Quantum computing enhanced computational catalysis.
+\newblock {\em Phys. Rev. Res.}, 3:033055, Jul 2021.
+
+\bibitem{PRXQuantum.2.010103}
+Ryan Babbush, Jarrod~R. McClean, Michael Newman, Craig Gidney, Sergio Boixo,
+  and Hartmut Neven.
+\newblock Focus beyond quadratic speedups for error-corrected quantum
+  advantage.
+\newblock {\em PRX Quantum}, 2:010103, Mar 2021.
+
+\bibitem{su_2021}
+Yuan Su, Dominic~W. Berry, Nathan Wiebe, Nicholas Rubin, and Ryan Babbush.
+\newblock Fault-tolerant quantum simulations of chemistry in first
+  quantization.
+\newblock {\em PRX Quantum}, 2:040332, Nov 2021.
+
+\bibitem{ShokrianZini2023}
+Modjtaba Shokrian~Zini, Alain Delgado, Roberto dos Reis, Pablo~Antonio
+  Moreno~Casares, Jonathan~E. Mueller, Arne-Christian Voigt, and Juan~Miguel
+  Arrazola.
+\newblock Quantum simulation of battery materials using ionic pseudopotentials.
+\newblock {\em {Quantum}}, 7:1049, July 2023.
+
+\bibitem{rubin_2024}
+Nicholas~C. Rubin, Dominic~W. Berry, Alina Kononov, Fionn~D. Malone, Tanuj
+  Khattar, Alec White, Joonho Lee, Hartmut Neven, Ryan Babbush, and Andrew~D.
+  Baczewski.
+\newblock Quantum computation of stopping power for inertial fusion target
+  design.
+\newblock {\em Proceedings of the National Academy of Sciences},
+  121(23):e2317772121, 2024.
+
+\bibitem{PRXQuantum.5.020101}
+Amara Katabarwa, Katerina Gratsea, Athena Caesura, and Peter~D. Johnson.
+\newblock Early fault-tolerant quantum computing.
+\newblock {\em PRX Quantum}, 5:020101, Jun 2024.
+
+\bibitem{Preskill2018_NISQ}
+John Preskill.
+\newblock Quantum {C}omputing in the {NISQ} era and beyond.
+\newblock {\em {Quantum}}, 2:79, August 2018.
+
+\bibitem{Kim2023}
+Youngseok Kim, Andrew Eddins, Sajant Anand, Ken~Xuan Wei, Ewout van~den Berg,
+  Sami Rosenblatt, Hasan Nayfeh, Yantao Wu, Michael Zaletel, Kristan Temme, and
+  Abhinav Kandala.
+\newblock Evidence for the utility of quantum computing before fault tolerance.
+\newblock {\em Nature}, 618(7965):500--505, Jun 2023.
+
+\bibitem{botea2018complexity}
+Adi Botea, Akihiro Kishimoto, and Radu Marinescu.
+\newblock On the complexity of quantum circuit compilation.
+\newblock In {\em Proceedings of the International Symposium on Combinatorial
+  Search}, volume~9, pages 138--142, 2018.
+
+\bibitem{wu_qgo}
+Xin-Chuan Wu, Marc~Grau Davis, Frederic~T. Chong, and Costin Iancu.
+\newblock Reoptimization of quantum circuits via hierarchical synthesis.
+\newblock In {\em 2021 International Conference on Rebooting Computing (ICRC)},
+  pages 35--46, 2021.
+
+\bibitem{PhysRevA.95.042306}
+Earl Campbell.
+\newblock Shorter gate sequences for quantum computing by mixing unitaries.
+\newblock {\em Phys. Rev. A}, 95:042306, Apr 2017.
+
+\bibitem{hastings2016turning}
+Matthew~B Hastings.
+\newblock Turning gate synthesis errors into incoherent errors.
+\newblock {\em arXiv:1612.01011}, 2016.
+
+\bibitem{martyn2024}
+John~M. Martyn and Patrick Rall.
+\newblock Halving the cost of quantum algorithms with randomization, 2024.
+
+\bibitem{campbell_qdrift}
+Earl Campbell.
+\newblock Random compiler for fast hamiltonian simulation.
+\newblock {\em Phys. Rev. Lett.}, 123:070503, Aug 2019.
+
+\bibitem{Akibue2024}
+Seiseki Akibue, Go~Kato, and Seiichiro Tani.
+\newblock Probabilistic state synthesis based on optimal convex approximation.
+\newblock {\em npj Quantum Information}, 10:3, Jan 2024.
+
+\bibitem{yoshioka2024errorcrafting}
+Nobuyuki Yoshioka, Seiseki Akibue, Hayata Morisaki, Kento Tsubouchi, and
+  Yasunari Suzuki.
+\newblock Error crafting in probabilistic quantum gate synthesis, 2024.
+
+\bibitem{Akibu_ACM_2024}
+Seiseki Akibue, Go~Kato, and Seiichiro Tani.
+\newblock Probabilistic unitary synthesis with optimal accuracy.
+\newblock {\em ACM Transactions on Quantum Computing}, 5, 2024.
+
+\bibitem{Ouyang2020compilation}
+Yingkai Ouyang, David~R. White, and Earl~T. Campbell.
+\newblock Compilation by stochastic {H}amiltonian sparsification.
+\newblock {\em {Quantum}}, 4:235, February 2020.
+
+\bibitem{PRXQuantum.2.040305}
+Chi-Fang Chen, Hsin-Yuan Huang, Richard Kueng, and Joel~A. Tropp.
+\newblock Concentration for random product formulas.
+\newblock {\em PRX Quantum}, 2:040305, Oct 2021.
+
+\bibitem{PhysRevResearch.6.013224}
+Matthew Pocrnic, Matthew Hagan, Juan Carrasquilla, Dvira Segal, and Nathan
+  Wiebe.
+\newblock Composite qdrift-product formulas for quantum and classical
+  simulations in real and imaginary time.
+\newblock {\em Phys. Rev. Res.}, 6:013224, Mar 2024.
+
+\bibitem{huang_2023}
+Yifei Huang, Yuguo Shao, Weiluo Ren, Jinzhao Sun, and Dingshun Lv.
+\newblock Efficient quantum imaginary time evolution by drifting real-time
+  evolution: An approach with low gate and measurement complexity.
+\newblock {\em Journal of Chemical Theory and Computation}, 19(13):3868--3876,
+  2023.
+
+\bibitem{PhysRevA.109.062431}
+Chien-Hung Cho, Dominic~W. Berry, and Min-Hsiu Hsieh.
+\newblock Doubling the order of approximation via the randomized product
+  formula.
+\newblock {\em Phys. Rev. A}, 109:062431, Jun 2024.
+
+\bibitem{patel_2021}
+Tirthak Patel, Ed~Younis, Costin Iancu, Wibe de~Jong, and Devesh Tiwari.
+\newblock Robust and resource-efficient quantum circuit approximation, 2021.
+
+\bibitem{low2021halving}
+Guang~Hao Low.
+\newblock Halving the cost of quantum multiplexed rotations, 2021.
+
+\bibitem{Kliuchnikov_2023}
+Vadym Kliuchnikov, Kristin Lauter, Romy Minko, Adam Paetznick, and Christophe
+  Petit.
+\newblock Shorter quantum circuits via single-qubit gate approximation.
+\newblock {\em {Quantum}}, 7:1208, December 2023.
+
+\bibitem{Burt_2024}
+Felix Burt, Kuan-Cheng Chen, and Kin~K. Leung.
+\newblock Generalised circuit partitioning for distributed quantum computing.
+\newblock In {\em 2024 IEEE International Conference on Quantum Computing and
+  Engineering (QCE)}, page 173–178. IEEE, September 2024.
+
+\bibitem{Ueda_1996}
+N.~Ueda and R.~Nakano.
+\newblock Generalization error of ensemble estimators.
+\newblock In {\em Proceedings of International Conference on Neural Networks
+  (ICNN'96)}, volume~1, pages 90--95 vol.1, 1996.
+
+\bibitem{Brown_20005}
+Gavin Brown, Jeremy~L. Wyatt, and Peter Ti{\~n}o.
+\newblock Managing diversity in regression ensembles.
+\newblock {\em Journal of Machine Learning Research}, 6(55):1621--1650, 2005.
+
+\bibitem{tropp_2015}
+Joel~A. Tropp.
+\newblock An introduction to matrix concentration inequalities.
+\newblock {\em Found. Trends Mach. Learn.}, 8(1–2):1–230, May 2015.
+
+\bibitem{watrous_2018}
+J.~Watrous.
+\newblock {\em The Theory of Quantum Information}.
+\newblock Cambridge University Press, 2018.
+
+\bibitem{noauthor_notitle_nodate}
+
+
+\bibitem{noauthor_notitle_nodate-1}
+
+
+\bibitem{hennessy_computer_2012}
+John~L. Hennessy, David~A. Patterson, and Krste Asanović.
+\newblock {\em Computer architecture: a quantitative approach}.
+\newblock Morgan Kaufmann/Elsevier, Waltham, MA, 5th ed edition, 2012.
+\newblock OCLC: ocn755102367.
+
+\bibitem{carbone_controlled_1970}
+G.~Carbone and L.~Massone.
+\newblock [{Controlled} experimentation on the therapeutic effect of 2 topical
+  anti-inflammatory steroids].
+\newblock {\em Archivio Italiano Di Dermatologia, Venereologia, E Sessuologia},
+  36(3):207--214, 1970.
+
+\bibitem{noauthor_notitle_nodate-2}
+
+
+\bibitem{ieee_computer_society_ispass_2009}
+IEEE~Computer Society, editor.
+\newblock {\em {ISPASS} 2009: {IEEE} {International} {Symposium} on
+  {Performance} {Analaysis} of {Systems} and {Software}: {April} 26-28, 2009,
+  {Boston}, {MA}, {USA}}.
+\newblock Institute of Electrical and Electronics Engineers, Piscataway, NJ,
+  2009.
+\newblock Meeting Name: International Symposium on Performance Analysis of
+  Systems and Software.
+
+\bibitem{noauthor_2012_2012}
+{\em 2012 innovative parallel computing ({InPar} 2012): {San} {Jose},
+  {California}, {USA}, 13 - 14 {May} 2012}.
+\newblock IEEE, Piscataway, NJ, 2012.
+
+\bibitem{gupta_study_2012}
+Kshitij Gupta, Jeff~A. Stuart, and John~D. Owens.
+\newblock A study of {Persistent} {Threads} style {GPU} programming for {GPGPU}
+  workloads.
+\newblock In {\em 2012 {Innovative} {Parallel} {Computing} ({InPar})}, pages
+  1--14, San Jose, CA, USA, May 2012. IEEE.
+
+\bibitem{laine_megakernels_2013}
+Samuli Laine, Tero Karras, and Timo Aila.
+\newblock Megakernels considered harmful: wavefront path tracing on {GPUs}.
+\newblock In {\em Proceedings of the 5th {High}-{Performance} {Graphics}
+  {Conference} on - {HPG} '13}, page 137, Anaheim, California, 2013. ACM Press.
+
+\bibitem{chen_effisha_2017}
+Guoyang Chen, Yue Zhao, Xipeng Shen, and Huiyang Zhou.
+\newblock {EffiSha}: {A} {Software} {Framework} for {Enabling} {Effficient}
+  {Preemptive} {Scheduling} of {GPU}.
+\newblock In {\em Proceedings of the 22nd {ACM} {SIGPLAN} {Symposium} on
+  {Principles} and {Practice} of {Parallel} {Programming}}, pages 3--16, Austin
+  Texas USA, January 2017. ACM.
+
+\bibitem{gupta_study_2012-1}
+Kshitij Gupta, Jeff~A. Stuart, and John~D. Owens.
+\newblock A study of {Persistent} {Threads} style {GPU} programming for {GPGPU}
+  workloads.
+\newblock In {\em 2012 {Innovative} {Parallel} {Computing} ({InPar})}, pages
+  1--14, San Jose, CA, USA, May 2012. IEEE.
+
+\bibitem{wu_enabling_2015}
+Bo~Wu, Guoyang Chen, Dong Li, Xipeng Shen, and Jeffrey Vetter.
+\newblock Enabling and {Exploiting} {Flexible} {Task} {Assignment} on {GPU}
+  through {SM}-{Centric} {Program} {Transformations}.
+\newblock In {\em Proceedings of the 29th {ACM} on {International} {Conference}
+  on {Supercomputing}}, pages 119--130, Newport Beach California USA, June
+  2015. ACM.
+
+\bibitem{plano_scheduling_2020}
+Tom Plano and Jeremy Buhler.
+\newblock Scheduling {Irregular} {Dataflow} {Pipelines} on {SIMD}
+  {Architectures}.
+\newblock In {\em Proceedings of the 2020 {Sixth} {Workshop} on {Programming}
+  {Models} for {SIMD}/{Vector} {Processing}}, pages 1--9, San Diego CA USA,
+  February 2020. ACM.
+
+\bibitem{ren_extracting_2019}
+Bin Ren, Shruthi Balakrishna, Youngjoon Jo, Sriram Krishnamoorthy, Kunal
+  Agrawal, and Milind Kulkarni.
+\newblock Extracting {SIMD} {Parallelism} from {Recursive} {Task}-{Parallel}
+  {Programs}.
+\newblock {\em ACM Transactions on Parallel Computing}, 6(4):1--37, December
+  2019.
+
+\bibitem{troendle_specialized_2019}
+David Troendle, Tuan Ta, and Byunghyun Jang.
+\newblock A {Specialized} {Concurrent} {Queue} for {Scheduling} {Irregular}
+  {Workloads} on {GPUs}.
+\newblock In {\em Proceedings of the 48th {International} {Conference} on
+  {Parallel} {Processing}}, pages 1--11, Kyoto Japan, August 2019. ACM.
+
+\bibitem{mccully_rna_1988}
+J.~D. McCully and C.~C. Liew.
+\newblock {RNA} transcription in myocardial-cell nuclei during postnatal
+  development. {A} study establishing an assay system for transcription in
+  vitro.
+\newblock {\em The Biochemical Journal}, 256(2):441--445, December 1988.
+
+\bibitem{huo_efficient_2013}
+Xin Huo, Sriram Krishnamoorthy, and Gagan Agrawal.
+\newblock Efficient scheduling of recursive control flow on {GPUs}.
+\newblock In {\em Proceedings of the 27th international {ACM} conference on
+  {International} conference on supercomputing - {ICS} '13}, page 409, Eugene,
+  Oregon, USA, 2013. ACM Press.
+
+\bibitem{noauthor_cuda_nodate}
+{CUDA} {C}++ {Programming} {Guide}.
+\newblock page 441.
+
+\bibitem{anantpur_taming_2014}
+Jayvant Anantpur and Govindarajan R.
+\newblock Taming {Control} {Divergence} in {GPUs} through {Control} {Flow}
+  {Linearization}.
+\newblock In Albert Cohen, editor, {\em Compiler {Construction}}, pages
+  133--153, Berlin, Heidelberg, 2014. Springer Berlin Heidelberg.
+
+\bibitem{anantpur_taming_2014-1}
+Jayvant Anantpur and Govindarajan R.
+\newblock Taming {Control} {Divergence} in {GPUs} through {Control} {Flow}
+  {Linearization}.
+\newblock In Albert Cohen, editor, {\em Compiler {Construction}}, pages
+  133--153, Berlin, Heidelberg, 2014. Springer Berlin Heidelberg.
+
+\bibitem{huang_logical_2021}
+Yipeng Huang, Steven Holtzen, Todd Millstein, Guy Van~den Broeck, and Margaret
+  Martonosi.
+\newblock Logical {Abstractions} for {Noisy} {Variational} {Quantum}
+  {Algorithm} {Simulation}.
+\newblock {\em arXiv:2103.17226 [quant-ph]}, March 2021.
+\newblock arXiv: 2103.17226.
+
+\bibitem{maccormack_simulating_2021}
+Ian MacCormack, Alexey Galda, and Adam~L. Lyon.
+\newblock Simulating {Large} {PEPs} {Tensor} {Networks} on {Small} {Quantum}
+  {Devices}.
+\newblock {\em arXiv:2110.00507 [cond-mat, physics:quant-ph]}, October 2021.
+\newblock arXiv: 2110.00507.
+
+\bibitem{markov_simulating_2008}
+Igor~L. Markov and Yaoyun Shi.
+\newblock Simulating {Quantum} {Computation} by {Contracting} {Tensor}
+  {Networks}.
+\newblock {\em SIAM Journal on Computing}, 38(3):963--981, January 2008.
+
+\bibitem{markov_simulating_2008-1}
+Igor~L. Markov and Yaoyun Shi.
+\newblock Simulating {Quantum} {Computation} by {Contracting} {Tensor}
+  {Networks}.
+\newblock {\em SIAM Journal on Computing}, 38(3):963--981, January 2008.
+\newblock Publisher: Society for Industrial and Applied Mathematics.
+
+\bibitem{allen_quantum_2017}
+John-Mark~A. Allen, Jonathan Barrett, Dominic~C. Horsman, Ciarán~M. Lee, and
+  Robert~W. Spekkens.
+\newblock Quantum {Common} {Causes} and {Quantum} {Causal} {Models}.
+\newblock {\em Physical Review X}, 7(3):031021, July 2017.
+
+\bibitem{allen_quantum_2017-1}
+John-Mark~A. Allen, Jonathan Barrett, Dominic~C. Horsman, Ciarán~M. Lee, and
+  Robert~W. Spekkens.
+\newblock Quantum {Common} {Causes} and {Quantum} {Causal} {Models}.
+\newblock {\em Physical Review X}, 7(3):031021, July 2017.
+\newblock Publisher: American Physical Society.
+
+\bibitem{nazarov_bayesian_2020}
+Ivan Nazarov and Evgeny Burnaev.
+\newblock Bayesian {Sparsification} {Methods} for {Deep} {Complex}-valued
+  {Networks}.
+\newblock {\em arXiv:2003.11413 [cs, stat]}, June 2020.
+\newblock arXiv: 2003.11413.
+
+\bibitem{gottesman_heisenberg_1998}
+Daniel Gottesman.
+\newblock The {Heisenberg} {Representation} of {Quantum} {Computers}.
+\newblock {\em arXiv:quant-ph/9807006}, July 1998.
+\newblock arXiv: quant-ph/9807006.
+
+\bibitem{aaronson_improved_2004}
+Scott Aaronson and Daniel Gottesman.
+\newblock Improved simulation of stabilizer circuits.
+\newblock {\em Physical Review A}, 70(5):052328, November 2004.
+\newblock Publisher: American Physical Society.
+
+\bibitem{emerson_scalable_2005}
+Joseph Emerson, Robert Alicki, and Karol Zyczkowski.
+\newblock Scalable {Noise} {Estimation} with {Random} {Unitary} {Operators}.
+\newblock {\em Journal of Optics B: Quantum and Semiclassical Optics},
+  7(10):S347--S352, October 2005.
+\newblock arXiv: quant-ph/0503243.
+
+\bibitem{aaronson_complexity-theoretic_2016}
+Scott Aaronson and Lijie Chen.
+\newblock Complexity-{Theoretic} {Foundations} of {Quantum} {Supremacy}
+  {Experiments}.
+\newblock {\em arXiv:1612.05903 [quant-ph]}, December 2016.
+\newblock arXiv: 1612.05903.
+
+\bibitem{bqskit}
+Ed~Younis, Costin~C. Iancu, Wim Lavrijsen, Marc Davis, and Ethan Smith.
+\newblock Berkeley quantum synthesis toolkit (bqskit) v1.
+\newblock [Computer Software] \url{https://doi.org/10.11578/dc.20210603.2}, apr
+  2021.
+
+\bibitem{qsearch}
+Marc~G. Davis, Ethan Smith, Ana Tudor, Koushik Sen, Irfan Siddiqi, and Costin
+  Iancu.
+\newblock Towards optimal topology aware quantum circuit synthesis.
+\newblock In {\em 2020 IEEE International Conference on Quantum Computing and
+  Engineering (QCE)}, pages 223--234, 2020.
+
+\bibitem{ntro}
+Marc~Grau Davis.
+\newblock {\em Numerical Synthesis of Arbitrary Multi-Qubit Unitaries with low
+  T-Count}.
+\newblock PhD thesis, Massachusetts Institute of Technology, 02 2023.
+
+\bibitem{leap}
+Ethan Smith, Marc~Grau Davis, Jeffrey Larson, Ed~Younis, Lindsay~Bassman
+  Oftelie, Wim Lavrijsen, and Costin Iancu.
+\newblock Leap: Scaling numerical optimization based synthesis using an
+  incremental approach.
+\newblock {\em ACM Transactions on Quantum Computing}, 4(1), February 2023.
+
+\bibitem{emerson_scalable_2005-1}
+Joseph Emerson, Robert Alicki, and Karol Zyczkowski.
+\newblock Scalable {Noise} {Estimation} with {Random} {Unitary} {Operators}.
+\newblock {\em Journal of Optics B: Quantum and Semiclassical Optics},
+  7(10):S347--S352, October 2005.
+\newblock arXiv: quant-ph/0503243.
+
+\bibitem{gilchrist_distance_2005}
+Alexei Gilchrist, Nathan~K. Langford, and Michael~A. Nielsen.
+\newblock Distance measures to compare real and ideal quantum processes.
+\newblock {\em Physical Review A}, 71(6):062310, June 2005.
+\newblock arXiv: quant-ph/0408063.
+
+\bibitem{deutsch_quantum_1989}
+David~Elieser Deutsch and Roger Penrose.
+\newblock Quantum computational networks.
+\newblock {\em Proceedings of the Royal Society of London. A. Mathematical and
+  Physical Sciences}, 425(1868):73--90, September 1989.
+\newblock Publisher: Royal Society.
+
+\bibitem{tannu_case_2018}
+Swamit~S. Tannu and Moinuddin~K. Qureshi.
+\newblock A {Case} for {Variability}-{Aware} {Policies} for {NISQ}-{Era}
+  {Quantum} {Computers}.
+\newblock {\em arXiv:1805.10224 [quant-ph]}, May 2018.
+\newblock arXiv: 1805.10224.
+
+\bibitem{abhari_scaffold_nodate}
+Ali~Javadi Abhari, Arvin Faruque, Mohammad~Javad Dousti, Lukas Svec, Oana Catu,
+  Amlan Chakrabati, Chen-Fu Chiang, Seth Vanderwilt, John Black, Fred Chong,
+  Margaret Martonosi, Martin Suchara, Ken Brown, Massoud Pedram, and Todd Brun.
+\newblock Scaffold: {Quantum} {Programming} {Language}.
+\newblock page~43.
+
+\bibitem{qdrift}
+Earl Campbell.
+\newblock Random compiler for fast hamiltonian simulation.
+\newblock {\em Physical Review Letters}, 123(7), August 2019.
+
+\bibitem{sarovar_detecting_2020}
+Mohan Sarovar, Timothy Proctor, Kenneth Rudinger, Kevin Young, Erik Nielsen,
+  and Robin Blume-Kohout.
+\newblock Detecting crosstalk errors in quantum information processors.
+\newblock {\em Quantum}, 4:321, September 2020.
+\newblock arXiv: 1908.09855.
+
+\bibitem{rossi_quantum_2021}
+A.~Rossi, P.~G. Baity, V.~M. Schäfer, and M.~Weides.
+\newblock Quantum computing hardware in the cloud: {Should} a computational
+  chemist care?
+\newblock {\em International Journal of Quantum Chemistry}, 121(14), July 2021.
+\newblock arXiv: 2102.03248.
+
+\bibitem{divincenzo_physical_2000}
+David~P. DiVincenzo.
+\newblock The {Physical} {Implementation} of {Quantum} {Computation}.
+\newblock {\em Fortschritte der Physik}, 48(9-11):771--783, 2000.
+\newblock \_eprint:
+  https://onlinelibrary.wiley.com/doi/pdf/10.1002/1521-3978\%28200009\%2948\%3A9/11\%3C771\%3A\%3AAID-PROP771\%3E3.0.CO\%3B2-E.
+
+\bibitem{qiskit}
+Ali Javadi-Abhari, Matthew Treinish, Kevin Krsulich, Christopher~J. Wood, Jake
+  Lishman, Julien Gacon, Simon Martiel, Paul~D. Nation, Lev~S. Bishop,
+  Andrew~W. Cross, Blake~R. Johnson, and Jay~M. Gambetta.
+\newblock Quantum computing with {Q}iskit, 2024.
+
+\bibitem{tomesh_supermarq_2022-1}
+Teague Tomesh, Pranav Gokhale, Victory Omole, Gokul~Subramanian Ravi,
+  Kaitlin~N. Smith, Joshua Viszlai, Xin-Chuan Wu, Nikos Hardavellas,
+  Margaret~R. Martonosi, and Frederic~T. Chong.
+\newblock {SupermarQ}: {A} {Scalable} {Quantum} {Benchmark} {Suite}.
+\newblock {\em arXiv:2202.11045 [quant-ph]}, April 2022.
+\newblock arXiv: 2202.11045.
+
+\bibitem{nielsen_gate_2021}
+Erik Nielsen, John~King Gamble, Kenneth Rudinger, Travis Scholten, Kevin Young,
+  and Robin Blume-Kohout.
+\newblock Gate {Set} {Tomography}.
+\newblock {\em Quantum}, 5:557, October 2021.
+\newblock arXiv: 2009.07301.
+
+\bibitem{calderbank_good_1996}
+A.~R. Calderbank and Peter~W. Shor.
+\newblock Good {Quantum} {Error}-{Correcting} {Codes} {Exist}.
+\newblock {\em Physical Review A}, 54(2):1098--1105, August 1996.
+\newblock arXiv: quant-ph/9512032.
+
+\bibitem{steane_tutorial_nodate}
+Andrew~M Steane.
+\newblock A {Tutorial} on {Quantum} {Error} {Correction}.
+\newblock page~24.
+
+\bibitem{steane_simple_1996}
+Andrew Steane.
+\newblock Simple {Quantum} {Error} {Correcting} {Codes}.
+\newblock {\em Physical Review A}, 54(6):4741--4751, December 1996.
+\newblock arXiv: quant-ph/9605021.
+
+\bibitem{munoz-coreas_t-count_2018}
+Edgard Muñoz-Coreas and Himanshu Thapliyal.
+\newblock T-count and {Qubit} {Optimized} {Quantum} {Circuit} {Design} of the
+  {Non}-{Restoring} {Square} {Root} {Algorithm}.
+\newblock {\em arXiv:1712.08254 [quant-ph]}, October 2018.
+\newblock arXiv: 1712.08254.
+
+\bibitem{whitney_fault_2009}
+Mark~G. Whitney, Nemanja Isailovic, Yatish Patel, and John Kubiatowicz.
+\newblock A {Fault} {Tolerant}, {Area} {Efficient} {Architecture} for {Shor}'s
+  {Factoring} {Algorithm}.
+\newblock Technical Report arXiv:0909.2188, arXiv, September 2009.
+\newblock arXiv:0909.2188 [quant-ph] type: article.
+
+\bibitem{cacciapuoti_quantum_2020}
+Angela~Sara Cacciapuoti, Marcello Caleffi, Francesco Tafuri, Francesco~Saverio
+  Cataliotti, Stefano Gherardini, and Giuseppe Bianchi.
+\newblock Quantum {Internet}: {Networking} {Challenges} in {Distributed}
+  {Quantum} {Computing}.
+\newblock {\em IEEE Network}, 34(1):137--143, January 2020.
+\newblock Conference Name: IEEE Network.
+
+\bibitem{lo_classical_2000}
+Hoi-Kwong Lo.
+\newblock Classical {Communication} {Cost} in {Distributed} {Quantum}
+  {Information} {Processing} - {A} generalization of {Quantum} {Communication}
+  {Complexity}.
+\newblock {\em Physical Review A}, 62(1):012313, June 2000.
+\newblock arXiv:quant-ph/9912009.
+
+\bibitem{cacciapuoti_when_2020}
+Angela~Sara Cacciapuoti, Marcello Caleffi, Rodney Van~Meter, and Lajos Hanzo.
+\newblock When {Entanglement} meets {Classical} {Communications}: {Quantum}
+  {Teleportation} for the {Quantum} {Internet} ({Invited} {Paper}).
+\newblock {\em IEEE Transactions on Communications}, 68(6):3808--3833, June
+  2020.
+\newblock arXiv:1907.06197 [quant-ph].
+
+\bibitem{caleffi_optimal_2017}
+Marcello Caleffi.
+\newblock Optimal {Routing} for {Quantum} {Networks}.
+\newblock {\em IEEE Access}, 5:22299--22312, 2017.
+\newblock Conference Name: IEEE Access.
+
+\bibitem{daei_optimized_2020}
+Omid Daei, Keivan Navi, and Mariam Zomorodi-Moghadam.
+\newblock Optimized {Quantum} {Circuit} {Partitioning}.
+\newblock {\em International Journal of Theoretical Physics},
+  59(12):3804--3820, December 2020.
+\newblock arXiv:2005.11614 [quant-ph].
+
+\bibitem{tang_cutqc_2021-3}
+Wei Tang, Teague Tomesh, Martin Suchara, Jeffrey Larson, and Margaret
+  Martonosi.
+\newblock {CutQC}: using small {Quantum} computers for large {Quantum} circuit
+  evaluations.
+\newblock In {\em Proceedings of the 26th {ACM} {International} {Conference} on
+  {Architectural} {Support} for {Programming} {Languages} and {Operating}
+  {Systems}}, pages 473--486, Virtual USA, April 2021. ACM.
+
+\bibitem{gay_communicating_2004}
+Simon Gay and Rajagopal Nagarajan.
+\newblock Communicating {Quantum} {Processes}.
+\newblock Technical Report arXiv:quant-ph/0409052, arXiv, September 2004.
+\newblock arXiv:quant-ph/0409052 type: article.
+
+\bibitem{nguyen_extending_2020}
+Thien Nguyen, Anthony Santana, Tyler Kharazi, Daniel Claudino, Hal Finkel, and
+  Alexander McCaskey.
+\newblock Extending {C}++ for {Heterogeneous} {Quantum}-{Classical}
+  {Computing}.
+\newblock Technical Report arXiv:2010.03935, arXiv, October 2020.
+\newblock arXiv:2010.03935 [quant-ph] type: article.
+
+\bibitem{mosca_quantum_2019}
+Michele Mosca, Martin Roetteler, and Peter Selinger.
+\newblock Quantum {Programming} {Languages} ({Dagstuhl} {Seminar} 18381).
+\newblock page 21 pages, 2019.
+\newblock Artwork Size: 21 pages Medium: application/pdf Publisher: Schloss
+  Dagstuhl - Leibniz-Zentrum fuer Informatik GmbH, Wadern/Saarbruecken, Germany
+  Version Number: 1.0.
+
+\bibitem{gao_faithful_2019}
+Wei-Chao Gao, Si-Chen Mi, Cong Cao, Xiaofei Liu, Tie-Jun Wang, and Chuan Wang.
+\newblock Faithful {Transmission} of {Single}-{Photon} {Qubits} {Using}
+  {Error}-{Rejection} {Coding}.
+\newblock {\em IEEE Photonics Journal}, 11(1):1--7, February 2019.
+\newblock Conference Name: IEEE Photonics Journal.
+
+\bibitem{gilchrist_distance_2005-1}
+Alexei Gilchrist, Nathan~K. Langford, and Michael~A. Nielsen.
+\newblock Distance measures to compare real and ideal quantum processes.
+\newblock {\em Physical Review A}, 71(6):062310, June 2005.
+\newblock arXiv:quant-ph/0408063.
+
+\bibitem{stollenwerk_diagrammatic_2022}
+Tobias Stollenwerk and Stuart Hadfield.
+\newblock Diagrammatic {Analysis} for {Parameterized} {Quantum} {Circuits}.
+\newblock Technical Report arXiv:2204.01307, arXiv, April 2022.
+\newblock arXiv:2204.01307 [quant-ph] type: article.
+
+\bibitem{jordan_wigner}
+P.~Jordan and E.~Wigner.
+\newblock Uber das paulische aquivalenzverbot.
+\newblock {\em Zeitschrift fur Physik}, 47(9):631--651, 1928.
+
+\bibitem{qasm_bench}
+Ang Li, Samuel Stein, Sriram Krishnamoorthy, and James Ang.
+\newblock Qasmbench: A low-level quantum benchmark suite for nisq evaluation
+  and simulation.
+\newblock {\em ACM Transactions on Quantum Computing}, 2022.
+
+\bibitem{stein_2021}
+Samuel~A. Stein, Betis Baheri, Daniel Chen, Ying Mao, Qiang Guan, Ang Li,
+  Bo~Fang, and Shuai Xu.
+\newblock Qugan: A quantum state fidelity based generative adversarial network.
+\newblock In {\em 2021 IEEE International Conference on Quantum Computing and
+  Engineering (QCE)}, page 71–81. IEEE, October 2021.
+
+\bibitem{draper}
+Thomas~G. Draper.
+\newblock Addition on a quantum computer, 2000.
+
+\bibitem{bouland_complexity_2019}
+Adam Bouland, Bill Fefferman, Chinmay Nirkhe, and Umesh Vazirani.
+\newblock On the complexity and verification of quantum random circuit
+  sampling.
+\newblock {\em Nature Physics}, 15(2):159--163, February 2019.
+\newblock Number: 2 Publisher: Nature Publishing Group.
+
+\bibitem{noauthor_new_nodate}
+New {Directions} {In} {Testing} {\textbar} {Semantic} {Scholar}.
+
+\bibitem{boixo_characterizing_2018}
+Sergio Boixo, Sergei~V. Isakov, Vadim~N. Smelyanskiy, Ryan Babbush, Nan Ding,
+  Zhang Jiang, Michael~J. Bremner, John~M. Martinis, and Hartmut Neven.
+\newblock Characterizing quantum supremacy in near-term devices.
+\newblock {\em Nature Physics}, 14(6):595--600, June 2018.
+\newblock Number: 6 Publisher: Nature Publishing Group.
+
+\bibitem{pan_simulating_2021}
+Feng Pan and Pan Zhang.
+\newblock Simulating the {Sycamore} quantum supremacy circuits, March 2021.
+\newblock arXiv:2103.03074 [physics, physics:quant-ph].
+
+\bibitem{arute_supplementary_2019}
+Frank Arute, Kunal Arya, Ryan Babbush, Dave Bacon, Joseph~C. Bardin, Rami
+  Barends, Rupak Biswas, Sergio Boixo, Fernando G. S.~L. Brandao, David~A.
+  Buell, Brian Burkett, Yu~Chen, Zijun Chen, Ben Chiaro, Roberto Collins,
+  William Courtney, Andrew Dunsworth, Edward Farhi, Brooks Foxen, Austin
+  Fowler, Craig Gidney, Marissa Giustina, Rob Graff, Keith Guerin, Steve
+  Habegger, Matthew~P. Harrigan, Michael~J. Hartmann, Alan Ho, Markus~R.
+  Hoffmann, Trent Huang, Travis~S. Humble, Sergei~V. Isakov, Evan Jeffrey,
+  Zhang Jiang, Dvir Kafri, Kostyantyn Kechedzhi, Julian Kelly, Paul~V. Klimov,
+  Sergey Knysh, Alexander~N. Korotkov, Fedor Kostritsa, David Landhuis, Mike
+  Lindmark, Erik Lucero, Dmitry Lyakh, Salvatore Mandra, Jarrod~R. McClean,
+  Matt McEwen, Anthony Megrant, Xiao Mi, Kristel Michielsen, Masoud Mohseni,
+  Josh Mutus, Ofer Naaman, Matthew Neeley, Charles Neill, Murphy~Yuezhen Niu,
+  Eric Ostby, Andre Petukhov, John~C. Platt, Chris Quintana, Eleanor~G.
+  Rieffel, Pedram Roushan, Nicholas~C. Rubin, Daniel Sank, Kevin~J. Satzinger,
+  Vadim Smelyanskiy, Kevin~J. Sung, Matthew~D. Trevithick, Amit Vainsencher,
+  Benjamin Villalonga, Theodore White, Z.~Jamie Yao, Ping Yeh, Adam Zalcman,
+  Hartmut Neven, and John~M. Martinis.
+\newblock Supplementary information for "{Quantum} supremacy using a
+  programmable superconducting processor".
+\newblock {\em Nature}, 574(7779):505--510, October 2019.
+\newblock arXiv:1910.11333 [quant-ph].
+
+\bibitem{caleffi_distributed_2022}
+Marcello Caleffi, Michele Amoretti, Davide Ferrari, Daniele Cuomo, Jessica
+  Illiano, Antonio Manzalini, and Angela~Sara Cacciapuoti.
+\newblock Distributed {Quantum} {Computing}: a {Survey}, December 2022.
+\newblock arXiv:2212.10609 [quant-ph].
+
+\bibitem{gidney_how_2021}
+Craig Gidney and Martin Ekerå.
+\newblock How to factor 2048 bit {RSA} integers in 8 hours using 20 million
+  noisy qubits.
+\newblock {\em Quantum}, 5:433, April 2021.
+\newblock arXiv:1905.09749 [quant-ph].
+
+\bibitem{beauregard_circuit_2003}
+Stephane Beauregard.
+\newblock Circuit for {Shor}'s algorithm using 2n+3 qubits, February 2003.
+\newblock arXiv:quant-ph/0205095.
+
+\bibitem{bravyi_universal_2005}
+Sergei Bravyi and Alexei Kitaev.
+\newblock Universal {Quantum} {Computation} with ideal {Clifford} gates and
+  noisy ancillas.
+\newblock {\em Physical Review A}, 71(2):022316, February 2005.
+\newblock arXiv:quant-ph/0403025.
+
+\bibitem{herman_survey_2022}
+Dylan Herman, Cody Googin, Xiaoyuan Liu, Alexey Galda, Ilya Safro, Yue Sun,
+  Marco Pistoia, and Yuri Alexeev.
+\newblock A {Survey} of {Quantum} {Computing} for {Finance}, June 2022.
+\newblock arXiv:2201.02773 [quant-ph, q-fin].
+
+\bibitem{lee_hybrid_2019}
+Yonghae Lee, Jaewoo Joo, and Soojoon Lee.
+\newblock Hybrid quantum linear equation algorithm and its experimental test on
+  {IBM} {Quantum} {Experience}.
+\newblock {\em Scientific Reports}, 9(1):4778, March 2019.
+\newblock Number: 1 Publisher: Nature Publishing Group.
+
+\bibitem{gidney_how_2021-1}
+Craig Gidney and Martin Ekerå.
+\newblock How to factor 2048 bit {RSA} integers in 8 hours using 20 million
+  noisy qubits.
+\newblock {\em Quantum}, 5:433, April 2021.
+\newblock Publisher: Verein zur Förderung des Open Access Publizierens in den
+  Quantenwissenschaften.
+
+\bibitem{peruzzo_variational_2014}
+Alberto Peruzzo, Jarrod McClean, Peter Shadbolt, Man-Hong Yung, Xiao-Qi Zhou,
+  Peter~J. Love, Alán Aspuru-Guzik, and Jeremy~L. O'Brien.
+\newblock A variational eigenvalue solver on a quantum processor.
+\newblock {\em Nature Communications}, 5(1):4213, July 2014.
+\newblock arXiv:1304.3061 [physics, physics:quant-ph].
+
+\bibitem{van_meter_architecture-dependent_2006}
+Rodney Van~Meter, Kohei~M. Itoh, and Thaddeus~D. Ladd.
+\newblock Architecture-{Dependent} {Execution} {Time} of {Shor}'s {Algorithm},
+  May 2006.
+\newblock arXiv:quant-ph/0507023.
+
+\bibitem{biamonte_quantum_2017}
+Jacob Biamonte, Peter Wittek, Nicola Pancotti, Patrick Rebentrost, Nathan
+  Wiebe, and Seth Lloyd.
+\newblock Quantum {Machine} {Learning}.
+\newblock {\em Nature}, 549(7671):195--202, September 2017.
+\newblock arXiv:1611.09347 [cond-mat, physics:quant-ph, stat].
+
+\bibitem{harrow_quantum_2009}
+Aram~W. Harrow, Avinatan Hassidim, and Seth Lloyd.
+\newblock Quantum algorithm for solving linear systems of equations.
+\newblock {\em Physical Review Letters}, 103(15):150502, October 2009.
+\newblock arXiv:0811.3171 [quant-ph].
+
+\bibitem{van_leent_entangling_2022}
+Tim van Leent, Matthias Bock, Florian Fertig, Robert Garthoff, Sebastian
+  Eppelt, Yiru Zhou, Pooja Malik, Matthias Seubert, Tobias Bauer, Wenjamin
+  Rosenfeld, Wei Zhang, Christoph Becher, and Harald Weinfurter.
+\newblock Entangling single atoms over 33 km telecom fibre.
+\newblock {\em Nature}, 607(7917):69--73, July 2022.
+\newblock Number: 7917 Publisher: Nature Publishing Group.
+
+\bibitem{van_leent_entangling_2022-1}
+Tim van Leent, Matthias Bock, Florian Fertig, Robert Garthoff, Sebastian
+  Eppelt, Yiru Zhou, Pooja Malik, Matthias Seubert, Tobias Bauer, Wenjamin
+  Rosenfeld, Wei Zhang, Christoph Becher, and Harald Weinfurter.
+\newblock Entangling single atoms over 33 km telecom fibre.
+\newblock {\em Nature}, 607(7917):69--73, July 2022.
+
+\bibitem{cleve_how_1999}
+Richard Cleve, Daniel Gottesman, and Hoi-Kwong Lo.
+\newblock How to share a quantum secret.
+\newblock {\em Physical Review Letters}, 83(3):648--651, July 1999.
+\newblock arXiv:quant-ph/9901025.
+
+\bibitem{haner_distributed_2021}
+Thomas Häner, Damian~S. Steiger, Torsten Hoefler, and Matthias Troyer.
+\newblock Distributed {Quantum} {Computing} with {QMPI}.
+\newblock In {\em Proceedings of the {International} {Conference} for {High}
+  {Performance} {Computing}, {Networking}, {Storage} and {Analysis}}, pages
+  1--13, November 2021.
+\newblock arXiv:2105.01109 [quant-ph].
+
+\bibitem{zhang_minimum_2004}
+Jun Zhang, Jiri Vala, Shankar Sastry, and K.~Birgitta Whaley.
+\newblock Minimum construction of two-qubit quantum operations.
+\newblock {\em Physical Review Letters}, 93(2):020502, July 2004.
+\newblock arXiv:quant-ph/0312193.
+
+\bibitem{kim_evidence_2023}
+Youngseok Kim, Andrew Eddins, Sajant Anand, Ken~Xuan Wei, Ewout van~den Berg,
+  Sami Rosenblatt, Hasan Nayfeh, Yantao Wu, Michael Zaletel, Kristan Temme, and
+  Abhinav Kandala.
+\newblock Evidence for the utility of quantum computing before fault tolerance.
+\newblock {\em Nature}, 618(7965):500--505, June 2023.
+\newblock Number: 7965 Publisher: Nature Publishing Group.
+
+\bibitem{bao_fluxonium_2022}
+Feng Bao, Hao Deng, Dawei Ding, Ran Gao, Xun Gao, Cupjin Huang, Xun Jiang,
+  Hsiang-Sheng Ku, Zhisheng Li, Xizheng Ma, Xiaotong Ni, Jin Qin, Zhijun Song,
+  Hantao Sun, Chengchun Tang, Tenghui Wang, Feng Wu, Tian Xia, Wenlong Yu, Fang
+  Zhang, Gengyan Zhang, Xiaohang Zhang, Jingwei Zhou, Xing Zhu, Yaoyun Shi,
+  Jianxin Chen, Hui-Hai Zhao, and Chunqing Deng.
+\newblock Fluxonium: an alternative qubit platform for high-fidelity
+  operations.
+\newblock {\em Physical Review Letters}, 129(1):010502, June 2022.
+\newblock arXiv:2111.13504 [quant-ph].
+
+\bibitem{chen_benchmarking_2023}
+Jwo-Sy Chen, Erik Nielsen, Matthew Ebert, Volkan Inlek, Kenneth Wright,
+  Vandiver Chaplin, Andrii Maksymov, Eduardo Páez, Amrit Poudel, Peter Maunz,
+  and John Gamble.
+\newblock Benchmarking a trapped-ion quantum computer with 29 algorithmic
+  qubits, August 2023.
+\newblock arXiv:2308.05071 [quant-ph].
+
+\bibitem{zhang_minimum_2004-1}
+Jun Zhang, Jiri Vala, Shankar Sastry, and K.~Birgitta Whaley.
+\newblock Minimum construction of two-qubit quantum operations.
+\newblock {\em Physical Review Letters}, 93(2):020502, July 2004.
+\newblock arXiv:quant-ph/0312193.
+
+\bibitem{akhtar_high-fidelity_2023}
+M.~Akhtar, F.~Bonus, F.~R. Lebrun-Gallagher, N.~I. Johnson, M.~Siegele-Brown,
+  S.~Hong, S.~J. Hile, S.~A. Kulmiya, S.~Weidt, and W.~K. Hensinger.
+\newblock A high-fidelity quantum matter-link between ion-trap microchip
+  modules.
+\newblock {\em Nature Communications}, 14(1):531, February 2023.
+\newblock Number: 1 Publisher: Nature Publishing Group.
+
+\bibitem{magesan_robust_2011}
+Easwar Magesan, J.~M. Gambetta, and Joseph Emerson.
+\newblock Robust randomized benchmarking of quantum processes.
+\newblock {\em Physical Review Letters}, 106(18):180504, May 2011.
+\newblock arXiv:1009.3639 [quant-ph].
+
+\bibitem{magesan_characterizing_2012}
+Easwar Magesan, Jay~M. Gambetta, and Joseph Emerson.
+\newblock Characterizing {Quantum} {Gates} via {Randomized} {Benchmarking}.
+\newblock {\em Physical Review A}, 85(4):042311, April 2012.
+\newblock arXiv:1109.6887 [quant-ph].
+
+\bibitem{knill_randomized_2008}
+E.~Knill, D.~Leibfried, R.~Reichle, J.~Britton, R.~B. Blakestad, J.~D. Jost,
+  C.~Langer, R.~Ozeri, S.~Seidelin, and D.~J. Wineland.
+\newblock Randomized {Benchmarking} of {Quantum} {Gates}.
+\newblock {\em Physical Review A}, 77(1):012307, January 2008.
+\newblock arXiv:0707.0963 [quant-ph].
+
+\bibitem{arute_supplementary_2019-1}
+Frank Arute, Kunal Arya, Ryan Babbush, Dave Bacon, Joseph~C. Bardin, Rami
+  Barends, Rupak Biswas, Sergio Boixo, Fernando G. S.~L. Brandao, David~A.
+  Buell, Brian Burkett, Yu~Chen, Zijun Chen, Ben Chiaro, Roberto Collins,
+  William Courtney, Andrew Dunsworth, Edward Farhi, Brooks Foxen, Austin
+  Fowler, Craig Gidney, Marissa Giustina, Rob Graff, Keith Guerin, Steve
+  Habegger, Matthew~P. Harrigan, Michael~J. Hartmann, Alan Ho, Markus~R.
+  Hoffmann, Trent Huang, Travis~S. Humble, Sergei~V. Isakov, Evan Jeffrey,
+  Zhang Jiang, Dvir Kafri, Kostyantyn Kechedzhi, Julian Kelly, Paul~V. Klimov,
+  Sergey Knysh, Alexander~N. Korotkov, Fedor Kostritsa, David Landhuis, Mike
+  Lindmark, Erik Lucero, Dmitry Lyakh, Salvatore Mandra, Jarrod~R. McClean,
+  Matt McEwen, Anthony Megrant, Xiao Mi, Kristel Michielsen, Masoud Mohseni,
+  Josh Mutus, Ofer Naaman, Matthew Neeley, Charles Neill, Murphy~Yuezhen Niu,
+  Eric Ostby, Andre Petukhov, John~C. Platt, Chris Quintana, Eleanor~G.
+  Rieffel, Pedram Roushan, Nicholas~C. Rubin, Daniel Sank, Kevin~J. Satzinger,
+  Vadim Smelyanskiy, Kevin~J. Sung, Matthew~D. Trevithick, Amit Vainsencher,
+  Benjamin Villalonga, Theodore White, Z.~Jamie Yao, Ping Yeh, Adam Zalcman,
+  Hartmut Neven, and John~M. Martinis.
+\newblock Supplementary information for "{Quantum} supremacy using a
+  programmable superconducting processor".
+\newblock {\em Nature}, 574(7779):505--510, October 2019.
+\newblock arXiv:1910.11333 [quant-ph].
+
+\bibitem{cross_validating_2019}
+Andrew~W. Cross, Lev~S. Bishop, Sarah Sheldon, Paul~D. Nation, and Jay~M.
+  Gambetta.
+\newblock Validating quantum computers using randomized model circuits.
+\newblock {\em Physical Review A}, 100(3):032328, September 2019.
+\newblock arXiv:1811.12926 [quant-ph].
+
+\bibitem{younis_quantum_2022}
+Ed~Younis and Costin Iancu.
+\newblock Quantum {Circuit} {Optimization} and {Transpilation} via
+  {Parameterized} {Circuit} {Instantiation}, June 2022.
+\newblock arXiv:2206.07885 [quant-ph].
+
+\bibitem{tket}
+Seyon Sivarajah, Silas Dilkes, Alexander Cowtan, Will Simmons, Alec Edgington,
+  and Ross Duncan.
+\newblock tket : {A} {Retargetable} {Compiler} for {NISQ} {Devices}.
+\newblock {\em Quantum Science and Technology}, 6(1):014003, January 2021.
+\newblock arXiv:2003.10611 [quant-ph].
+
+\bibitem{cirq}
+Cirq Developers.
+\newblock Cirq, July 2023.
+
+\bibitem{wille_mqt_2023}
+Robert Wille and Lukas Burgholzer.
+\newblock {MQT} {QMAP}: {Efficient} {Quantum} {Circuit} {Mapping}.
+\newblock In {\em Proceedings of the 2023 {International} {Symposium} on
+  {Physical} {Design}}, pages 198--204, March 2023.
+\newblock arXiv:2301.11935 [quant-ph].
+
+\bibitem{horodecki_general_1999}
+Pawel Horodecki, Michal Horodecki, and Ryszard Horodecki.
+\newblock General teleportation channel, singlet fraction and
+  quasi-distillation, March 1999.
+\newblock arXiv:quant-ph/9807091.
+
+\bibitem{weiden_improving_2023}
+Mathias Weiden, Ed~Younis, Justin Kalloor, John Kubiatowicz, and Costin Iancu.
+\newblock Improving {Quantum} {Circuit} {Synthesis} with {Machine} {Learning},
+  June 2023.
+\newblock arXiv:2306.05622 [quant-ph].
+
+\bibitem{ross_sellinger}
+Neil~J. Ross and Peter Selinger.
+\newblock Optimal ancilla-free clifford+t approximation of z-rotations, 2016.
+
+\bibitem{mandviwalla_implementing_2018}
+Aamir Mandviwalla, Keita Ohshiro, and Bo~Ji.
+\newblock Implementing {Grover}’s {Algorithm} on the {IBM} {Quantum}
+  {Computers}.
+\newblock In {\em 2018 {IEEE} {International} {Conference} on {Big} {Data}
+  ({Big} {Data})}, pages 2531--2537, December 2018.
+
+\bibitem{farhi_quantum_2014}
+Edward Farhi, Jeffrey Goldstone, and Sam Gutmann.
+\newblock A {Quantum} {Approximate} {Optimization} {Algorithm}, November 2014.
+\newblock arXiv:1411.4028 [quant-ph].
+
+\bibitem{bravyi_fermionic_2002}
+Sergey Bravyi and Alexei Kitaev.
+\newblock Fermionic quantum computation.
+\newblock {\em Annals of Physics}, 298(1):210--226, May 2002.
+\newblock arXiv:quant-ph/0003137.
+
+\bibitem{peruzzo_variational_2014-1}
+Alberto Peruzzo, Jarrod McClean, Peter Shadbolt, Man-Hong Yung, Xiao-Qi Zhou,
+  Peter~J. Love, Alán Aspuru-Guzik, and Jeremy~L. O'Brien.
+\newblock A variational eigenvalue solver on a quantum processor.
+\newblock {\em Nature Communications}, 5(1):4213, July 2014.
+\newblock arXiv:1304.3061 [physics, physics:quant-ph].
+
+\bibitem{shin_phonon-driven_2018}
+Dongbin Shin, Hannes Hübener, Umberto De~Giovannini, Hosub Jin, Angel Rubio,
+  and Noejung Park.
+\newblock Phonon-driven spin-{Floquet} magneto-valleytronics in {MoS2}.
+\newblock {\em Nature Communications}, 9(1):638, February 2018.
+\newblock Number: 1 Publisher: Nature Publishing Group.
+
+\bibitem{li_co-design_2021}
+Gushu Li, Anbang Wu, Yunong Shi, Ali Javadi-Abhari, Yufei Ding, and Yuan Xie.
+\newblock On the {Co}-{Design} of {Quantum} {Software} and {Hardware}.
+\newblock In {\em Proceedings of the {Eight} {Annual} {ACM} {International}
+  {Conference} on {Nanoscale} {Computing} and {Communication}}, {NANOCOM} '21,
+  pages 1--7, New York, NY, USA, September 2021. Association for Computing
+  Machinery.
+
+\bibitem{safi_influence_2023}
+Hila Safi, Karen Wintersperger, and Wolfgang Mauerer.
+\newblock Influence of {HW}-{SW}-{Co}-{Design} on {Quantum} {Computing}
+  {Scalability}, June 2023.
+\newblock arXiv:2306.04246 [quant-ph].
+
+\bibitem{erhard_characterizing_2019}
+Alexander Erhard, Joel~James Wallman, Lukas Postler, Michael Meth, Roman
+  Stricker, Esteban~Adrian Martinez, Philipp Schindler, Thomas Monz, Joseph
+  Emerson, and Rainer Blatt.
+\newblock Characterizing large-scale quantum computers via cycle benchmarking.
+\newblock {\em Nature Communications}, 10(1):5347, November 2019.
+\newblock arXiv:1902.08543 [quant-ph].
+
+\bibitem{cerezo_challenges_2022}
+M.~Cerezo, Guillaume Verdon, Hsin-Yuan Huang, Lukasz Cincio, and Patrick~J.
+  Coles.
+\newblock Challenges and opportunities in quantum machine learning.
+\newblock {\em Nature Computational Science}, 2(9):567--576, September 2022.
+\newblock Number: 9 Publisher: Nature Publishing Group.
+
+\bibitem{noauthor_ionq_nodate}
+{IonQ} {Forte}: {The} {First} {Software}-{Configurable} {Quantum} {Computer}.
+
+\bibitem{noauthor_rigetti_nodate}
+Rigetti {QCS}.
+
+\bibitem{noauthor_quantinuum_nodate}
+Quantinuum {\textbar} {Hardware} {\textbar} {System} {Model} {H2}.
+
+\bibitem{noauthor_technology_nodate}
+Technology.
+
+\bibitem{stein_qugan_2021}
+Samuel~A. Stein, Betis Baheri, Daniel Chen, Ying Mao, Qiang Guan, Ang Li,
+  Bo~Fang, and Shuai Xu.
+\newblock {QuGAN}: {A} {Quantum} {State} {Fidelity} based {Generative}
+  {Adversarial} {Network}.
+\newblock In {\em 2021 {IEEE} {International} {Conference} on {Quantum}
+  {Computing} and {Engineering} ({QCE})}, pages 71--81, October 2021.
+\newblock arXiv:2010.09036 [quant-ph].
+
+\bibitem{hartree_fock}
+Attila Szabo and Neil~S. Ostlund.
+\newblock {\em Modern Quantum Chemistry: Introduction to Advanced Electronic
+  Structure Theory}.
+\newblock Dover Publications, Inc., Mineola, first edition, 1996.
+
+\bibitem{brassard}
+Gilles Brassard, Peter Hoyer, Michele Mosca, and Alain Tapp.
+\newblock Quantum {Amplitude} {Amplification} and {Estimation}.
+\newblock volume 305, pages 53--74. 2002.
+\newblock arXiv:quant-ph/0005055.
+
+\bibitem{rahman_2022}
+Sarmed~A. Rahman, Randy Lewis, Emanuele Mendicelli, and Sarah Powell.
+\newblock Self-mitigating {Trotter} circuits for {SU}(2) lattice gauge theory
+  on a quantum computer.
+\newblock {\em Physical Review D}, 106(7):074502, October 2022.
+\newblock arXiv:2205.09247 [hep-lat].
+
+\bibitem{brassard_quantum_2002-1}
+Gilles Brassard, Peter Hoyer, Michele Mosca, and Alain Tapp.
+\newblock Quantum {Amplitude} {Amplification} and {Estimation}.
+\newblock volume 305, pages 53--74. 2002.
+\newblock arXiv:quant-ph/0005055.
+
+\end{thebibliography}
