@@ -63,6 +63,16 @@ Beginning of Stage 1. Building the basic MPO compiler and its test harness.
 - Keep code minimalistic. Use existing libraries. Only write custom code for what no library provides.
 - Reference for Riemannian optimization: https://github.com/INMLe/rqcopt-mpo
 
+## Running code
+
+- Never run scripts directly from the command line. Write them in `scripts/` first and run with `uv run`.
+- For quick debugging/exploration, use `uv run python scripts/foo.py`, not inline python -c.
+
+## Reproducibility
+
+- All experiments and test configurations should be specified in YAML format with explicit seeds.
+- Every random process must have a controllable seed so results are fully reproducible.
+
 ## Git discipline
 
 - Commits should be clean, scoped, focused, and frequent.
