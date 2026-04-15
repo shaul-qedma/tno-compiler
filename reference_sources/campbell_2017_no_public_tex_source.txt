@@ -1,0 +1,11 @@
+Reference 4 in SPEC.md:
+
+E. T. Campbell, "Shorter gate sequences for quantum computing by mixing unitaries,"
+Phys. Rev. A 95, 042306 (2017).
+
+Status:
+- I found the APS publication page for the paper.
+- I did not find a public arXiv preprint with the same title.
+- I did not find a public TeX source package to download.
+
+So this reference is documented here as unavailable in TeX-source form from the public locations I checked.
