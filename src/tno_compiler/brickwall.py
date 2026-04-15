@@ -48,18 +48,26 @@ def partition_gates(gates, n_qubits, n_layers, first_odd=True):
 
 
 def random_haar_gates(n_qubits, n_layers, first_odd=True, seed=0):
-    """Generate Haar-random 2-qubit gates for a brickwall circuit."""
+    """Generate Haar-random 2-qubit gates for a brickwall circuit.
+
+    Returns list of (2,2,2,2) numpy arrays (tensor form).
+    """
     ng = total_gates(n_qubits, n_layers, first_odd)
-    return [random_unitary(4, seed=seed + i).data for i in range(ng)]
+    return [random_unitary(4, seed=seed + i).data.reshape(2, 2, 2, 2)
+            for i in range(ng)]
 
 
 def gates_to_qiskit(gates, n_qubits, n_layers, first_odd=True):
-    """Convert gate list to a Qiskit QuantumCircuit."""
+    """Convert gate list to a Qiskit QuantumCircuit.
+
+    Gates can be (2,2,2,2) or (4,4) arrays.
+    """
     qc = QuantumCircuit(n_qubits)
     idx = 0
     for _, pairs in layer_structure(n_qubits, n_layers, first_odd):
         for q1, q2 in pairs:
-            qc.append(UnitaryGate(gates[idx]), [q1, q2])
+            mat = np.asarray(gates[idx]).reshape(4, 4)
+            qc.append(UnitaryGate(mat), [q1, q2])
             idx += 1
     return qc
 
@@ -78,7 +86,11 @@ def unitary_to_mpo(U, n_qubits, max_bond=None):
     return mpo
 
 
-def gates_to_mpo(gates, n_qubits, n_layers, max_bond=None, first_odd=True):
-    """Convert brickwall gates to MPO via exact unitary (small n only)."""
-    U = gates_to_unitary(gates, n_qubits, n_layers, first_odd)
-    return unitary_to_mpo(U, n_qubits, max_bond)
+def target_mpo(gates, n_qubits, n_layers, max_bond=None, first_odd=True):
+    """Build the target MPO for compilation: stores V† (adjoint of the target).
+
+    The rqcopt convention computes Tr(MPO * circuit), so the MPO must
+    hold V† so that maximizing Re Tr(V† U) minimizes ‖V - U‖_F.
+    """
+    V = gates_to_unitary(gates, n_qubits, n_layers, first_odd)
+    return unitary_to_mpo(V.conj().T, n_qubits, max_bond)
