@@ -8,7 +8,7 @@ from .mpo_ops import (
     identity_mpo, canonicalize_tensor,
     merge_gate_with_mpo_pair, split_merged_tensor,
 )
-from .brickwall import layer_structure, partition_gates
+from .brickwall import brickwall_ansatz_gates
 
 
 def _merge_layer_right_to_left(mpo, gates, odd, gate_is_left, max_bond):
@@ -108,8 +108,12 @@ def _layer_envs(gates, odd, upper, lower):
 def compute_cost_and_grad(target_arrays, gates, n_qubits, n_layers,
                           max_bond=128, first_odd=True):
     """Frobenius cost 2 - 2·Re(Tr(V†U))/2^n and its gradient."""
-    structure = layer_structure(n_qubits, n_layers, first_odd)
-    gate_layers = partition_gates(gates, n_qubits, n_layers, first_odd)
+    structure = brickwall_ansatz_gates(n_qubits, n_layers, first_odd)
+    # Partition flat gate list into per-layer lists
+    gate_layers, idx = [], 0
+    for _, pairs in structure:
+        gate_layers.append(gates[idx:idx + len(pairs)])
+        idx += len(pairs)
 
     # Build upper environments (target + circuit layers merged from above)
     top = [a.copy() for a in target_arrays]

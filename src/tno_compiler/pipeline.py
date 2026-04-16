@@ -1,48 +1,55 @@
-"""End-to-end compilation pipeline: target tolerance + depth budget.
+"""End-to-end Kalloor ensemble pipeline.
 
-Compiles an ensemble of circuits at a given depth, solves the Kalloor QP,
-and certifies the diamond distance. Optionally binary searches over depth.
+Target: a QuantumCircuit at any depth.
+Output: a weighted ensemble of shallower brickwall circuits with a
+certified diamond distance bound.
 """
 
 import numpy as np
-from .brickwall import random_haar_gates, circuit_to_mpo
+from qiskit.quantum_info import Operator
+
+from .brickwall import random_brickwall, circuit_to_mpo
 from .compiler import compile_circuit
 from .ensemble import ensemble_qp
 
 
-def compile_ensemble(target_gates, n_qubits, n_layers, n_circuits=5,
+def compile_ensemble(target, ansatz_depth, n_circuits=5,
                      tol=1e-2, compress_fraction=0.0, max_bond=None,
                      max_iter=200, lr=5e-3, first_odd=True, seed=0):
-    """Compile an ensemble of circuits and solve the Kalloor QP.
+    """Compile an ensemble of brickwall circuits approximating a target.
 
-    Returns dict with:
-        weights: optimal ensemble probabilities.
-        circuits: list of compiled gate lists.
-        delta_ens: ensemble Frobenius error ||Σ p_i U_i - V_mpo||_F.
-        R: max individual error max_i ||U_i - V_mpo||_F.
-        compress_error: Frobenius MPO compression error.
-        diamond_bound: 2*delta_ens_total + R_total² (certified upper bound).
+    Args:
+        target: qiskit QuantumCircuit.
+        ansatz_depth: depth of each compiled circuit.
+        n_circuits: number of circuits in the ensemble.
+        tol, compress_fraction, max_bond: passed to compile_circuit.
+        max_iter, lr: optimizer parameters.
+        seed: base seed for random initialization.
+
+    Returns dict with weights, circuits, diamond_bound, etc.
     """
-    # Compile M circuits from different initializations
+    n = target.num_qubits
+
+    # Compile M circuits from different random initializations
     circuits = []
+    gate_tensors_list = []
     compile_errors = []
+    compress_error = 0.0
     for i in range(n_circuits):
-        init = random_haar_gates(n_qubits, n_layers, first_odd, seed=seed + 1000 * i)
-        gates, info = compile_circuit(
-            target_gates, n_qubits, n_layers,
-            tol=tol, compress_fraction=compress_fraction,
-            max_bond=max_bond, max_iter=max_iter, lr=lr,
-            first_odd=first_odd, init_gates=init)
-        circuits.append(gates)
+        init_qc = random_brickwall(n, ansatz_depth, first_odd, seed=seed + 1000 * i)
+        init_tensors = _qc_to_gate_tensors(init_qc)
+        compiled, info = compile_circuit(
+            target, ansatz_depth, compress_fraction=compress_fraction,
+            tol=tol, max_bond=max_bond, max_iter=max_iter, lr=lr,
+            first_odd=first_odd, init_gates=init_tensors, callback=None)
+        circuits.append(compiled)
+        gate_tensors_list.append(info['gate_tensors'])
         compile_errors.append(info['compile_error'])
+        compress_error = info['compress_error']
 
-    compress_error = info['compress_error']
-
-    # Compute Gram matrix and target overlaps (dense, small n)
-    V = np.array(circuit_to_mpo(target_gates, n_qubits, n_layers, tol=0.0)[0].to_dense())
-    Us = [np.array(circuit_to_mpo(c, n_qubits, n_layers, tol=0.0)[0].to_dense())
-          for c in circuits]
-
+    # Gram matrix and target overlaps (dense, small n only)
+    V = Operator(target).data
+    Us = [Operator(c).data for c in circuits]
     M = len(Us)
     gram = np.zeros((M, M))
     overlaps = np.zeros(M)
@@ -54,20 +61,13 @@ def compile_ensemble(target_gates, n_qubits, n_layers, n_circuits=5,
     # Solve QP
     weights, qp_val = ensemble_qp(gram, overlaps)
 
-    # Certification (SPEC.md Lemma D)
-    # ||Σ p_i U_i - V||_F² = p^T G p - 2 p^T c + Tr(V†V) = qp_val + d
-    d = 2 ** n_qubits
-    ensemble_frob_sq = qp_val + d
-    ensemble_frob = np.sqrt(max(ensemble_frob_sq, 0))
-
-    # Individual Frobenius errors: ||U_i - V||_F = sqrt(2d - 2 Re Tr(U_i†V))
+    # Certification
+    d = 2 ** n
+    ensemble_frob = np.sqrt(max(qp_val + d, 0))
     individual_frobs = [np.sqrt(max(2 * d - 2 * overlaps[i], 0)) for i in range(M)]
     R = max(individual_frobs[i] for i in range(M) if weights[i] > 1e-10)
-
-    # Diamond bound with compression error
     delta_ens = ensemble_frob + compress_error
     R_total = R + compress_error
-    diamond_bound = 2 * delta_ens + R_total ** 2
 
     return {
         'weights': weights,
@@ -75,31 +75,35 @@ def compile_ensemble(target_gates, n_qubits, n_layers, n_circuits=5,
         'delta_ens': delta_ens,
         'R': R_total,
         'compress_error': compress_error,
-        'diamond_bound': diamond_bound,
+        'diamond_bound': 2 * delta_ens + R_total ** 2,
         'individual_frobs': individual_frobs,
         'qp_value': qp_val,
     }
 
 
-def find_min_depth(target_gates, n_qubits, tol, max_depth=20, **kwargs):
-    """Binary search for the minimum depth achieving diamond_bound ≤ tol."""
+def find_min_depth(target, tol, max_depth=20, **kwargs):
+    """Binary search for minimum ansatz_depth achieving diamond_bound ≤ tol."""
     lo, hi = 1, max_depth
-
     best = None
     while lo <= hi:
         mid = (lo + hi) // 2
-        result = compile_ensemble(
-            target_gates, n_qubits, mid, tol=tol, **kwargs)
+        result = compile_ensemble(target, mid, tol=tol, **kwargs)
         if result['diamond_bound'] <= tol:
             best = (mid, result)
             hi = mid - 1
         else:
             lo = mid + 1
-
     if best is None:
-        # Try max_depth as fallback
-        result = compile_ensemble(
-            target_gates, n_qubits, max_depth, tol=tol, **kwargs)
-        return max_depth, result
-
+        return max_depth, compile_ensemble(target, max_depth, tol=tol, **kwargs)
     return best
+
+
+def _qc_to_gate_tensors(qc):
+    """Extract (2,2,2,2) gate tensors from a QuantumCircuit."""
+    tensors = []
+    for instruction in qc.data:
+        gate = instruction.operation
+        mat = np.array(gate.to_matrix())
+        if mat.shape == (4, 4):
+            tensors.append(mat.reshape(2, 2, 2, 2))
+    return tensors

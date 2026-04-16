@@ -1,16 +1,53 @@
-"""1D brickwall circuit topology and quimb TN construction.
-
-Odd layers:  (0,1), (2,3), (4,5), ...
-Even layers: (1,2), (3,4), (5,6), ...
-"""
+"""1D brickwall circuit construction using Qiskit QuantumCircuit."""
 
 import numpy as np
 import quimb.tensor as qtn
 from qiskit.quantum_info import random_unitary
+from qiskit.circuit import QuantumCircuit
+from qiskit.circuit.library import UnitaryGate
 
 
-def layer_structure(n_qubits, n_layers, first_odd=True):
-    """List of (is_odd, [(q1,q2), ...]) for each layer."""
+def random_brickwall(n_qubits, n_layers, first_odd=True, seed=0):
+    """Generate a Haar-random brickwall QuantumCircuit."""
+    qc = QuantumCircuit(n_qubits)
+    odd = first_odd
+    gate_idx = 0
+    for layer in range(n_layers):
+        start = 0 if odd else 1
+        for i in range(start, n_qubits - 1, 2):
+            U = random_unitary(4, seed=seed + gate_idx).data
+            qc.append(UnitaryGate(U, label=f"g{gate_idx}"), [i, i + 1])
+            gate_idx += 1
+        odd = not odd
+    return qc
+
+
+def circuit_to_quimb_tn(qc):
+    """Convert a QuantumCircuit to a quimb unitary TN (split-gate)."""
+    n = qc.num_qubits
+    circ = qtn.Circuit(n)
+    for layer_idx, instruction in enumerate(qc.data):
+        gate = instruction.operation
+        qubits = [qc.find_bit(q).index for q in instruction.qubits]
+        mat = np.array(gate.to_matrix())
+        if len(qubits) == 2:
+            circ.apply_gate_raw(mat, tuple(qubits),
+                                gate_round=layer_idx, contract="split-gate")
+        elif len(qubits) == 1:
+            circ.apply_gate_raw(mat, tuple(qubits),
+                                gate_round=layer_idx, contract=True)
+    return circ.get_uni()
+
+
+def circuit_to_mpo(qc, max_bond=None, tol=1e-10, norm="operator"):
+    """QuantumCircuit → quimb MPO with guaranteed tolerance."""
+    from .compress import tn_to_mpo
+    tn = circuit_to_quimb_tn(qc)
+    return tn_to_mpo(tn, qc.num_qubits, max_bond=max_bond, tol=tol, norm=norm)
+
+
+def brickwall_ansatz_gates(n_qubits, n_layers, first_odd=True):
+    """Layer structure for a brickwall ansatz: list of (is_odd, [(q1,q2)...])."""
     odd = first_odd
     result = []
     for _ in range(n_layers):
@@ -20,55 +57,13 @@ def layer_structure(n_qubits, n_layers, first_odd=True):
     return result
 
 
-def total_gates(n_qubits, n_layers, first_odd=True):
-    return sum(len(p) for _, p in layer_structure(n_qubits, n_layers, first_odd))
-
-
-def partition_gates(gates, n_qubits, n_layers, first_odd=True):
-    """Split a flat gate list into per-layer lists."""
-    result, idx = [], 0
-    for _, pairs in layer_structure(n_qubits, n_layers, first_odd):
-        result.append(gates[idx:idx + len(pairs)])
-        idx += len(pairs)
-    return result
-
-
-def random_haar_gates(n_qubits, n_layers, first_odd=True, seed=0):
-    """Haar-random 2-qubit gates. Returns list of (2,2,2,2) arrays."""
-    ng = total_gates(n_qubits, n_layers, first_odd)
-    return [random_unitary(4, seed=seed + i).data.reshape(2, 2, 2, 2)
-            for i in range(ng)]
-
-
-def circuit_to_tn(gates, n_qubits, n_layers, first_odd=True):
-    """Build a quimb TN from brickwall gates (split-gate: one tensor per site per gate)."""
-    circ = qtn.Circuit(n_qubits)
+def gates_to_circuit(gate_tensors, n_qubits, ansatz_structure):
+    """Convert optimized (2,2,2,2) gate tensors back to a QuantumCircuit."""
+    qc = QuantumCircuit(n_qubits)
     idx = 0
-    for layer, (_, pairs) in enumerate(layer_structure(n_qubits, n_layers, first_odd)):
+    for _, pairs in ansatz_structure:
         for q1, q2 in pairs:
-            circ.apply_gate_raw(
-                np.asarray(gates[idx]).reshape(4, 4),
-                (q1, q2),
-                gate_round=layer,
-                contract="split-gate",
-            )
+            mat = np.asarray(gate_tensors[idx]).reshape(4, 4)
+            qc.append(UnitaryGate(mat), [q1, q2])
             idx += 1
-    return circ.get_uni()
-
-
-def circuit_to_mpo(gates, n_qubits, n_layers, first_odd=True,
-                   max_bond=None, tol=1e-10, norm="operator"):
-    """Brickwall gates → quimb MPO with guaranteed tolerance."""
-    from .compress import tn_to_mpo
-    tn = circuit_to_tn(gates, n_qubits, n_layers, first_odd)
-    return tn_to_mpo(tn, n_qubits, max_bond=max_bond, tol=tol, norm=norm)
-
-
-def target_mpo(gates, n_qubits, n_layers, first_odd=True,
-               max_bond=None, tol=1e-10, norm="operator"):
-    """Target MPO for compilation (stores V†). Returns (mpo, error_bound)."""
-    mpo, error = circuit_to_mpo(gates, n_qubits, n_layers, first_odd,
-                                max_bond, tol, norm)
-    reindex_map = {f"k{i}": f"b{i}" for i in range(n_qubits)}
-    reindex_map.update({f"b{i}": f"k{i}" for i in range(n_qubits)})
-    return mpo.conj().reindex(reindex_map), error
+    return qc
