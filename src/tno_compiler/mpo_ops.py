@@ -1,7 +1,7 @@
-"""MPO primitives: decomposition, merging, splitting, canonical forms.
+"""MPO array operations for the gradient computation.
 
-Each tensor has shape (bond_l, phys_up, phys_dn, bond_r) with
-dummy dim-1 bonds at boundaries.
+The gradient engine works with raw numpy arrays in (bond_l, k, b, bond_r)
+format. These primitives handle merging, splitting, and canonicalization.
 """
 
 import numpy as np
@@ -13,40 +13,7 @@ def identity_mpo(n_sites):
     return [T.copy() for _ in range(n_sites)]
 
 
-def matrix_to_mpo(U):
-    """Decompose a 2^n × 2^n matrix into an MPO via successive SVDs."""
-    n = int(round(np.log2(U.shape[0])))
-    A = U.reshape((2, 2) * n)
-    tensors = []
-    for site in range(1, n):
-        n_remaining = n - site + 1
-        if site == 1:
-            A = np.moveaxis(A, n_remaining, 1)
-        else:
-            A = np.moveaxis(A, n_remaining + 1, 2)
-        shape = A.shape
-        lim = 2 if site == 1 else 3
-        mat = A.reshape(int(np.prod(shape[:lim])), int(np.prod(shape[lim:])))
-        u, s, v = np.linalg.svd(mat, full_matrices=False)
-        tensors.append(u.reshape(shape[:lim] + (u.shape[-1],)))
-        A = (np.diag(s) @ v).reshape((u.shape[-1],) + shape[lim:])
-        if site == n - 1:
-            tensors.append(A)
-    tensors[0] = tensors[0][np.newaxis, ...]
-    tensors[-1] = tensors[-1][..., np.newaxis]
-    return tensors
-
-
-def trace_mpo(mpo):
-    traced = [np.einsum('iaaj->ij', T) for T in mpo]
-    result = traced[0]
-    for T in traced[1:]:
-        result = result @ T
-    return np.einsum('ii->', result)
-
-
 def canonicalize_tensor(T, left=True):
-    """QR/RQ canonicalize. Returns (isometric_tensor, remainder)."""
     shape = T.shape
     if left:
         mat = T.reshape(-1, shape[-1])
@@ -60,7 +27,7 @@ def canonicalize_tensor(T, left=True):
 
 def split_merged_tensor(T, canonical='left', max_bond=128):
     """Split (bl, k1, b1, k2, b2, br) → T1(bl,k1,b1,d), T2(d,k2,b2,br)."""
-    A = np.moveaxis(T, 3, 2)  # (bl, k1, k2, b1, b2, br)
+    A = np.moveaxis(T, 3, 2)
     shape = A.shape
     mat = A.reshape(shape[0] * shape[1] * shape[2],
                     shape[3] * shape[4] * shape[5])

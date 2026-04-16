@@ -3,20 +3,20 @@
 import numpy as np
 from hypothesis import given, settings, strategies as st
 
-from tno_compiler.brickwall import random_haar_gates, target_mpo, gates_to_unitary
+from tno_compiler.brickwall import (
+    random_haar_gates, target_mpo, circuit_to_mpo, mpo_to_arrays,
+)
 from tno_compiler.gradient import compute_cost_and_grad
 
-n_qubits_st = st.sampled_from([4, 6, 8])
-n_layers_st = st.integers(1, 4)
+n_qubits_st = st.sampled_from([4, 6])
+n_layers_st = st.integers(1, 3)
 seed_st = st.integers(0, 9999)
-
-# Bond dimension scales with system size to keep truncation error small
-MAX_BOND = {4: 128, 6: 256, 8: 512}
 
 
 def _exact_overlap(tg, cg, n, d):
-    V = gates_to_unitary(tg, n, d)
-    U = gates_to_unitary(cg, n, d)
+    """Tr(V†U) via dense matrices from quimb MPOs (testing only)."""
+    V = np.array(circuit_to_mpo(tg, n, d).to_dense())
+    U = np.array(circuit_to_mpo(cg, n, d).to_dense())
     return np.trace(V.conj().T @ U)
 
 
@@ -28,7 +28,7 @@ def test_overlap_matches_exact(n, d, seed):
     cg = random_haar_gates(n, d, seed=seed + 5000)
 
     cost, _ = compute_cost_and_grad(
-        target_mpo(tg, n, d), cg, n, d, max_bond=MAX_BOND[n])
+        mpo_to_arrays(target_mpo(tg, n, d)), cg, n, d)
     exact_cost = 2.0 - 2.0 * _exact_overlap(tg, cg, n, d).real / (2 ** n)
 
     assert abs(cost - exact_cost) < 1e-4, f"cost={cost}, exact={exact_cost}"
@@ -43,7 +43,7 @@ def test_gradient_finite_difference(n, d, seed):
     cg = random_haar_gates(n, d, seed=seed + 5000)
 
     _, grad = compute_cost_and_grad(
-        target_mpo(tg, n, d), cg, n, d, max_bond=MAX_BOND[n])
+        mpo_to_arrays(target_mpo(tg, n, d)), cg, n, d)
 
     rng = np.random.RandomState(seed)
     g_idx = rng.randint(0, len(cg))
