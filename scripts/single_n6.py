@@ -1,15 +1,12 @@
-"""Single compilation quality at n=6 across depths.
-
-Identity init, lr=2e-2, 1000 iter. No ensemble -- just how good
-can one circuit get?
+"""Single compilation quality at n=6 across depths. MPO-based superop norm.
 
 Usage: uv run python scripts/single_n6.py
 """
 
 import time
 import numpy as np
-from qiskit.quantum_info import Operator
 from tno_compiler.tfi import tfi_trotter_circuit
+from tno_compiler.brickwall import circuit_to_mpo
 from tno_compiler.compiler import compile_circuit
 
 n = 6
@@ -22,7 +19,7 @@ print("-" * 60)
 for steps in [1, 2, 4, 8]:
     target = tfi_trotter_circuit(n, J, g, h, dt, steps)
     td = target.depth()
-    V = Operator(target).data
+    V = np.array(circuit_to_mpo(target, tol=0.0)[0].to_dense())
     d = 2 ** n
 
     for frac in [0.25, 0.5, 0.75, 1.0]:
@@ -31,7 +28,7 @@ for steps in [1, 2, 4, 8]:
         compiled, info = compile_circuit(target, ad, max_iter=1000, lr=2e-2)
         cost = info['compile_error']
 
-        U = Operator(compiled).data
+        U = np.array(circuit_to_mpo(compiled, tol=0.0)[0].to_dense())
         S_diff = np.kron(U.conj(), U) - np.kron(V.conj(), V)
         superop = np.linalg.norm(S_diff, ord=2)
         elapsed = time.perf_counter() - t0

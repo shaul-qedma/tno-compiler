@@ -6,8 +6,6 @@ certified diamond distance bound.
 """
 
 import numpy as np
-from qiskit.quantum_info import Operator
-
 from .brickwall import random_brickwall, circuit_to_mpo
 from .compiler import compile_circuit
 from .ensemble import ensemble_qp
@@ -48,9 +46,9 @@ def compile_ensemble(target, ansatz_depth, n_circuits=5,
         compile_errors.append(info['compile_error'])
         compress_error = info['compress_error']
 
-    # Gram matrix and target overlaps (dense, small n only)
-    V = Operator(target).data
-    Us = [Operator(c).data for c in circuits]
+    # Gram matrix and target overlaps via MPO dense (big-endian, matches optimizer)
+    V = np.array(circuit_to_mpo(target, tol=0.0)[0].to_dense())
+    Us = [np.array(circuit_to_mpo(c, tol=0.0)[0].to_dense()) for c in circuits]
     M = len(Us)
     gram = np.zeros((M, M))
     overlaps = np.zeros(M)
