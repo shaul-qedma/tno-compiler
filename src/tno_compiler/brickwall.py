@@ -9,9 +9,7 @@ All matrices use big-endian qubit ordering (site 0 = MSB).
 """
 
 import numpy as np
-from qiskit.quantum_info import random_unitary, Operator
-from qiskit.circuit import QuantumCircuit
-from qiskit.circuit.library import UnitaryGate
+from qiskit.quantum_info import random_unitary
 
 
 def layer_pairs(n_qubits, odd):
@@ -75,26 +73,6 @@ def gates_to_unitary(gates, n_qubits, n_layers, first_odd=True):
             idx += 1
         U = layer_U @ U
     return U
-
-
-def gates_to_qiskit(gates, n_qubits, n_layers, first_odd=True):
-    """Convert brickwall gates to a Qiskit QuantumCircuit (for testing)."""
-    qc = QuantumCircuit(n_qubits)
-    idx = 0
-    for _, pairs in layer_structure(n_qubits, n_layers, first_odd):
-        for q1, q2 in pairs:
-            qc.append(UnitaryGate(np.asarray(gates[idx]).reshape(4, 4)), [q1, q2])
-            idx += 1
-    return qc
-
-
-def gates_to_unitary_qiskit(gates, n_qubits, n_layers, first_odd=True):
-    """Fast exact unitary via Qiskit Operator (little-endian convention).
-
-    Use for test verification only -- the qubit ordering differs from
-    the MPO convention, but Tr(V†U) is basis-independent.
-    """
-    return Operator(gates_to_qiskit(gates, n_qubits, n_layers, first_odd)).data
 
 
 def target_mpo(gates, n_qubits, n_layers, first_odd=True):
