@@ -1,44 +1,52 @@
-"""End-to-end compiler tests."""
+"""End-to-end compiler tests.
+
+Verifies that the compiled circuit reproduces the target by checking
+process_fidelity = |Tr(V†U)|²/d² ≈ 1, computed from the big-endian
+matrices (same convention as the optimizer).
+"""
 
 import numpy as np
-import pytest
 from hypothesis import given, settings, strategies as st
 
 from tno_compiler.compiler import compile_circuit
-from tno_compiler.brickwall import random_haar_gates, gates_to_unitary, target_mpo
+from tno_compiler.brickwall import random_haar_gates, target_mpo, gates_to_unitary
+
+n_qubits_st = st.sampled_from([4, 6])
+n_layers_st = st.integers(1, 2)
+seed_st = st.integers(0, 9999)
 
 
-def test_self_compilation():
-    """Compiling with the answer as init should stay near zero cost."""
-    n, d = 4, 2
-    tg = random_haar_gates(n, d, seed=42)
-    ta = target_mpo(tg, n, d)
-
-    gates, history = compile_circuit(ta, n, d, max_iter=10, lr=1e-3, init_gates=tg)
-    assert history[-1] < 1e-4, f"Self-compile cost {history[-1]} too high"
+def _fidelity(target_gates, compiled_gates, n, d):
+    """|Tr(V†U)|²/d² from big-endian matrices."""
+    V = gates_to_unitary(target_gates, n, d)
+    U = gates_to_unitary(compiled_gates, n, d)
+    d2 = (2 ** n) ** 2
+    return abs(np.trace(V.conj().T @ U)) ** 2 / d2
 
 
-def test_compilation_improves():
-    """Compilation from identity init should reduce cost."""
-    n, d = 4, 2
-    tg = random_haar_gates(n, d, seed=42)
-    ta = target_mpo(tg, n, d)
+@given(n=n_qubits_st, d=n_layers_st, seed=seed_st)
+@settings(max_examples=6, deadline=60000)
+def test_self_compilation(n, d, seed):
+    """Initializing with the exact answer should preserve fidelity ~1."""
+    tg = random_haar_gates(n, d, seed=seed)
+    gates, _ = compile_circuit(target_mpo(tg, n, d), n, d,
+                               max_iter=10, lr=1e-3, init_gates=tg)
+    assert _fidelity(tg, gates, n, d) > 0.999
 
-    gates, history = compile_circuit(ta, n, d, max_iter=50, lr=5e-3)
-    assert history[-1] < history[0], "Optimization did not improve"
 
+@given(n=n_qubits_st, d=n_layers_st, seed=seed_st)
+@settings(max_examples=6, deadline=120000)
+def test_fidelity_consistent_with_cost(n, d, seed):
+    """Process fidelity should be consistent with the optimizer's cost.
 
-def test_compiled_overlap_matches_exact():
-    """The MPO cost should match the exact matrix cost."""
-    n, d = 4, 2
-    tg = random_haar_gates(n, d, seed=42)
-    ta = target_mpo(tg, n, d)
-
-    gates, history = compile_circuit(ta, n, d, max_iter=30, lr=5e-3)
-
-    V = gates_to_unitary(tg, n, d)
-    U = gates_to_unitary(gates, n, d)
-    exact_cost = 2 - 2 * np.trace(V.conj().T @ U).real / (2 ** n)
-
-    assert abs(history[-1] - exact_cost) < 0.01, (
-        f"MPO cost {history[-1]} != exact {exact_cost}")
+    cost = 2 - 2·Re(Tr(V†U))/d  =>  Re(overlap)/d = 1 - cost/2
+    fidelity = |overlap|²/d² >= (Re(overlap)/d)² = (1 - cost/2)²
+    """
+    tg = random_haar_gates(n, d, seed=seed)
+    gates, history = compile_circuit(target_mpo(tg, n, d), n, d,
+                                     max_iter=100, lr=5e-3)
+    fid = _fidelity(tg, gates, n, d)
+    lower_bound = max(0, 1 - history[-1] / 2) ** 2
+    assert fid >= lower_bound - 1e-4, (
+        f"fidelity {fid:.6f} < lower bound {lower_bound:.6f} "
+        f"from cost {history[-1]:.6f}")

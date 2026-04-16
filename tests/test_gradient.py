@@ -1,4 +1,4 @@
-"""Tests for gradient computation, verified against finite differences."""
+"""Tests for gradient computation against exact overlaps and finite differences."""
 
 import numpy as np
 from hypothesis import given, settings, strategies as st
@@ -6,18 +6,22 @@ from hypothesis import given, settings, strategies as st
 from tno_compiler.brickwall import random_haar_gates, target_mpo, gates_to_unitary
 from tno_compiler.gradient import compute_cost_and_grad
 
+n_qubits_st = st.sampled_from([4, 6])
+n_layers_st = st.integers(1, 2)
+seed_st = st.integers(0, 9999)
 
-def _exact_overlap(target_gates, circuit_gates, n, d):
-    V = gates_to_unitary(target_gates, n, d)
-    U = gates_to_unitary(circuit_gates, n, d)
+
+def _exact_overlap(tg, cg, n, d):
+    """Tr(V†U) via big-endian matrices (same convention as target_mpo)."""
+    V = gates_to_unitary(tg, n, d)
+    U = gates_to_unitary(cg, n, d)
     return np.trace(V.conj().T @ U)
 
 
-@given(seed=st.integers(0, 9999))
-@settings(max_examples=5, deadline=120000)
-def test_overlap_matches_exact(seed):
-    """MPO cost should match exact Frobenius cost."""
-    n, d = 4, 2
+@given(n=n_qubits_st, d=n_layers_st, seed=seed_st)
+@settings(max_examples=10, deadline=30000)
+def test_overlap_matches_exact(n, d, seed):
+    """The MPO-computed Frobenius cost should match the exact cost."""
     tg = random_haar_gates(n, d, seed=seed)
     cg = random_haar_gates(n, d, seed=seed + 5000)
 
@@ -27,18 +31,15 @@ def test_overlap_matches_exact(seed):
     assert abs(cost - exact_cost) < 1e-6, f"cost={cost}, exact={exact_cost}"
 
 
-@given(seed=st.integers(0, 9999))
-@settings(max_examples=3, deadline=120000)
-def test_gradient_finite_difference(seed):
+@given(n=n_qubits_st, d=n_layers_st, seed=seed_st)
+@settings(max_examples=5, deadline=30000)
+def test_gradient_finite_difference(n, d, seed):
     """Analytic gradient should match finite differences."""
-    n, d = 4, 2
     eps = 1e-5
-
     tg = random_haar_gates(n, d, seed=seed)
     cg = random_haar_gates(n, d, seed=seed + 5000)
-    ta = target_mpo(tg, n, d)
 
-    _, grad = compute_cost_and_grad(ta, cg, n, d)
+    _, grad = compute_cost_and_grad(target_mpo(tg, n, d), cg, n, d)
 
     rng = np.random.RandomState(seed)
     g_idx = rng.randint(0, len(cg))
@@ -48,7 +49,9 @@ def test_gradient_finite_difference(seed):
     gates_p[g_idx] = gates_p[g_idx] + eps * direction
     gates_m[g_idx] = gates_m[g_idx] - eps * direction
 
-    fd = (_exact_overlap(tg, gates_p, n, d) - _exact_overlap(tg, gates_m, n, d)) / (2 * eps)
+    # Use gates_to_unitary (big-endian, doesn't require unitarity)
+    fd = (_exact_overlap(tg, gates_p, n, d) -
+          _exact_overlap(tg, gates_m, n, d)) / (2 * eps)
     analytic = np.einsum('abcd,abcd->', grad[g_idx].conj(), direction)
 
     rel_err = abs(fd - analytic) / max(abs(analytic), 1e-10)
