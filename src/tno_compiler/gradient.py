@@ -105,6 +105,64 @@ def _layer_envs(gates, odd, upper, lower):
     return np.stack(grads).conj()
 
 
+def polar_sweep_inplace(target_arrays, gates, n_qubits, n_layers,
+                        max_bond=128, first_odd=True):
+    """One polar decomposition sweep: update all gates in-place.
+
+    Same structure as compute_cost_and_grad but updates each gate via
+    polar(env) during the layer sweep, incrementally updating the lower
+    environment MPO. This is the Gibbs-Cincio (2025) algorithm.
+
+    Returns the cost after the sweep.
+    """
+    structure = brickwall_ansatz_gates(n_qubits, n_layers, first_odd)
+    gate_layers, idx = [], 0
+    for _, pairs in structure:
+        gate_layers.append(list(gates[idx:idx + len(pairs)]))
+        idx += len(pairs)
+
+    # Build upper environments (from current gates, before any updates)
+    top = [a.copy() for a in target_arrays]
+    upper_envs = [list(top)]
+    sweep_right = False
+    for gl, (odd, _) in zip(reversed(gate_layers[1:]), reversed(structure[1:])):
+        merge = _merge_layer_right_to_left if sweep_right else _merge_layer_left_to_right
+        top = merge(top, gl, odd, True, max_bond)
+        upper_envs.append([a.copy() for a in top])
+        sweep_right = not sweep_right
+    upper_envs.reverse()
+
+    # Sweep through layers: compute envs, update gates, update lower env
+    bottom = identity_mpo(n_qubits)
+    sweep_right = False
+    gate_idx = 0
+    for layer, (odd, _) in enumerate(structure):
+        if layer > 0:
+            merge = _merge_layer_right_to_left if sweep_right else _merge_layer_left_to_right
+            bottom = merge(bottom, gate_layers[layer - 1],
+                           structure[layer - 1][0], False, max_bond)
+            sweep_right = not sweep_right
+
+        # Compute environments for this layer
+        envs = _layer_envs(gate_layers[layer], odd,
+                           upper_envs[layer], bottom)
+
+        # Update each gate via polar decomposition
+        for i in range(len(gate_layers[layer])):
+            env = envs[i].reshape(4, 4)
+            u, _, vh = np.linalg.svd(env, full_matrices=False)
+            new_gate = (u @ vh).reshape(2, 2, 2, 2)
+            gate_layers[layer][i] = new_gate
+            gates[gate_idx + i] = new_gate
+
+        gate_idx += len(gate_layers[layer])
+
+    # Cost requires a clean evaluation with updated gates
+    cost, _ = compute_cost_and_grad(target_arrays, gates, n_qubits, n_layers,
+                                     max_bond, first_odd)
+    return cost
+
+
 def compute_cost_and_grad(target_arrays, gates, n_qubits, n_layers,
                           max_bond=128, first_odd=True):
     """Frobenius cost 2 - 2·Re(Tr(V†U))/2^n and its gradient."""

@@ -79,7 +79,10 @@ def compile_circuit(target, ansatz_depth, compress_fraction=0.0,
 
     if method == "polar":
         opt_gates, cost_history = polar_sweeps(
-            cost_grad_fn, init_gates, max_iter=max_iter, callback=callback)
+            cost_grad_fn, init_gates, max_iter=max_iter, callback=callback,
+            target_arrays=target_arrays, n_qubits=n_qubits,
+            n_layers=ansatz_depth, max_bond=max_bond or 128,
+            first_odd=first_odd)
     elif method == "adam":
         opt_gates, cost_history = riemannian_adam(
             cost_grad_fn, init_gates, max_iter=max_iter, lr=lr, callback=callback)

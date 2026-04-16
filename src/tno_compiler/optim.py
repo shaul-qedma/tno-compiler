@@ -12,27 +12,26 @@ import numpy as np
 
 # --- Polar decomposition sweeps ---
 
-def polar_sweeps(cost_grad_fn, gates_init, max_iter=100, callback=None):
-    """Optimize gates via sequential polar decomposition sweeps.
+def polar_sweeps(cost_grad_fn, gates_init, max_iter=100, callback=None,
+                 **kwargs):
+    """Optimize gates via polar decomposition sweeps (Gibbs & Cincio 2025).
 
-    Each sweep updates gates one at a time, recomputing all environments
-    after each single-gate update. This is Gauss-Seidel style, matching
-    Gibbs & Cincio (2025).
-
-    Slower per sweep than Jacobi (N environment computations per sweep
-    instead of 1), but converges reliably.
+    Each sweep recomputes all environments and updates each gate
+    sequentially via polar decomposition.
     """
     gates = list(gates_init)
     history = []
 
+    # Each sweep: recompute all environments, update each gate sequentially.
+    # TODO: incremental environment updates (Gibbs-Cincio style) for O(N)
+    # per sweep instead of O(N²). Requires alternating sweep direction
+    # and proper environment reset.
     for t in range(1, max_iter + 1):
-        # Update each gate sequentially
         for i in range(len(gates)):
             _, grad = cost_grad_fn(gates)
             env = grad[i].reshape(4, 4)
             u, _, vh = np.linalg.svd(env, full_matrices=False)
             gates[i] = (u @ vh).reshape(2, 2, 2, 2)
-
         cost, _ = cost_grad_fn(gates)
         history.append(float(cost))
         if callback:

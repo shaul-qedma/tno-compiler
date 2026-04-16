@@ -28,7 +28,7 @@ for n in [4, 6, 8, 10, 12, 14, 16]:
     for frac in [0.25, 0.5, 1.0]:
         ad = max(1, int(round(td * frac)))
         t0 = time.perf_counter()
-        compiled, info = compile_circuit(target, ad, max_iter=1000, lr=2e-2)
+        compiled, info = compile_circuit(target, ad, method="polar", max_iter=50)
         cost = info['compile_error']
         frob = np.sqrt(max(d * cost, 0))
         elapsed = time.perf_counter() - t0
