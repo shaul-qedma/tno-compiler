@@ -1,7 +1,4 @@
-"""Gradient of the overlap Tr(V†U) w.r.t. each circuit gate.
-
-Builds upper/lower environment MPOs by merging circuit layers, then
-computes gate-wise partial derivatives within each layer.
+"""Gradient of Tr(V†U) w.r.t. each circuit gate via MPO contraction.
 
 Ported from rqcopt-mpo/tn_brickwall_methods.py.
 """
@@ -67,7 +64,7 @@ def _merge_layer_left_to_right(mpo, gates, odd, gate_is_left, max_bond):
 
 
 def _layer_envs(gates, odd, upper, lower):
-    """Gate environments within a single layer."""
+    """Partial derivatives of the overlap w.r.t. each gate in one layer."""
     n_gates = len(gates)
     if odd:
         i_mpo = len(upper)
@@ -110,45 +107,34 @@ def _layer_envs(gates, odd, upper, lower):
 
 def compute_cost_and_grad(target_arrays, gates, n_qubits, n_layers,
                           max_bond=128, first_odd=True):
-    """Compute Frobenius cost and Euclidean gradient w.r.t. each gate.
-
-    Args:
-        target_arrays: list of (bl, k, b, br) arrays (target MPO, stores V†).
-        gates: flat list of (2,2,2,2) arrays (circuit gates).
-
-    Returns:
-        cost: 2 - 2·Re(Tr(V†U)) / 2^n
-        grad: array (n_gates, 2, 2, 2, 2)
-    """
+    """Frobenius cost 2 - 2·Re(Tr(V†U))/2^n and its gradient."""
     structure = layer_structure(n_qubits, n_layers, first_odd)
     gate_layers = partition_gates(gates, n_qubits, n_layers, first_odd)
-    is_odd = [s[0] for s in structure]
 
-    # Upper environments: target with circuit layers merged from above
+    # Build upper environments (target + circuit layers merged from above)
     top = [a.copy() for a in target_arrays]
     upper_envs = [list(top)]
-    sweep_right = False  # first merge is right-to-left
-    for gl, odd in zip(reversed(gate_layers[1:]), reversed(is_odd[1:])):
+    sweep_right = False
+    for gl, (odd, _) in zip(reversed(gate_layers[1:]), reversed(structure[1:])):
         merge = _merge_layer_right_to_left if sweep_right else _merge_layer_left_to_right
         top = merge(top, gl, odd, True, max_bond)
         upper_envs.append([a.copy() for a in top])
         sweep_right = not sweep_right
     upper_envs.reverse()
 
-    # Lower environments + gradients
+    # Build lower environments and compute gradients
     bottom = identity_mpo(n_qubits)
     sweep_right = False
     all_grads = []
-    for layer in range(n_layers):
+    for layer, (odd, _) in enumerate(structure):
         if layer > 0:
             merge = _merge_layer_right_to_left if sweep_right else _merge_layer_left_to_right
-            bottom = merge(bottom, gate_layers[layer - 1], is_odd[layer - 1],
-                           False, max_bond)
+            bottom = merge(bottom, gate_layers[layer - 1],
+                           structure[layer - 1][0], False, max_bond)
             sweep_right = not sweep_right
-        all_grads.append(_layer_envs(gate_layers[layer], is_odd[layer],
+        all_grads.append(_layer_envs(gate_layers[layer], odd,
                                      upper_envs[layer], bottom))
 
     grad = np.concatenate(all_grads, axis=0)
     overlap = np.einsum('abcd,abcd->', all_grads[0][0].conj(), gate_layers[0][0])
-    cost = 2.0 - 2.0 * overlap.real / (2 ** n_qubits)
-    return float(cost), grad
+    return float(2.0 - 2.0 * overlap.real / (2 ** n_qubits)), grad
