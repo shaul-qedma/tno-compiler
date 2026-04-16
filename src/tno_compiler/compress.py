@@ -1,11 +1,14 @@
 """Compress an arbitrary quimb TN into an MPO with guaranteed tolerance.
 
-Supports both operator norm and Frobenius norm error guarantees.
+Supports both operator norm and Frobenius norm error guarantees via
+optimal global error budget allocation across bonds (binary search on
+the per-bond SV cutoff).
 
-Three phases:
-1. Contract site groups into a single tensor per site (exact MPO).
-2. Collect the SVD spectrum at each bond.
-3. Binary search for the optimal global cutoff, then compress.
+Note: quimb's built-in compression (cutoff_mode="abs" or "rsum2") does
+not support global tolerance guarantees in either norm. Its per-bond
+cutoffs do not account for error accumulation across bonds. Our
+implementation fills this gap by collecting all bond spectra first,
+then finding the optimal global cutoff via binary search.
 """
 
 import numpy as np
