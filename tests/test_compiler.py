@@ -12,7 +12,7 @@ from tno_compiler.compiler import compile_circuit
 from tno_compiler.brickwall import random_haar_gates, target_mpo, gates_to_unitary
 
 n_qubits_st = st.sampled_from([4, 6])
-n_layers_st = st.integers(1, 2)
+n_layers_st = st.integers(1, 3)
 seed_st = st.integers(0, 9999)
 
 

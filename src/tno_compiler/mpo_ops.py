@@ -103,6 +103,8 @@ def merge_gate_with_mpo_pair(gate, mpo1, mpo2, gate_is_left=True):
     Returns 6-index tensor (bl, k1, b1, k2, b2, br).
     """
     if gate_is_left:
-        return np.einsum('iabc,cdef,begh->iadghf', mpo1, mpo2, gate)
+        return np.einsum('iabc,cdef,begh->iadghf', mpo1, mpo2, gate,
+                         optimize=True)
     else:
-        return np.einsum('abcd,icef,fdgh->iabegh', gate, mpo1, mpo2)
+        return np.einsum('abcd,icef,fdgh->iabegh', gate, mpo1, mpo2,
+                         optimize=True)

@@ -82,7 +82,8 @@ def _layer_envs(gates, odd, upper, lower):
         i_mpo -= 2
         R = np.einsum('abcd,defg,cfhk,ihbj,jkel,gl->ai',
                        upper[i_mpo], upper[i_mpo + 1], gate,
-                       lower[i_mpo], lower[i_mpo + 1], R)
+                       lower[i_mpo], lower[i_mpo + 1], R,
+                       optimize=True)
         R_envs.append(R.copy())
     R_envs.reverse()
 
@@ -97,10 +98,12 @@ def _layer_envs(gates, odd, upper, lower):
             R = R_envs[g]
             L = np.einsum('ai,abcd,defg,cfhk,ihbj,jkel->gl',
                            L, upper[i_env], upper[i_env + 1], gates[g - 1],
-                           lower[i_env], lower[i_env + 1])
+                           lower[i_env], lower[i_env + 1],
+                           optimize=True)
             i_env += 2
         grads.append(np.einsum('ab,acde,efgh,bick,kjfl,hl->dgij',
-                                L, A1, A2, B1, B2, R))
+                                L, A1, A2, B1, B2, R,
+                                optimize=True))
 
     return np.stack(grads).conj()
 
