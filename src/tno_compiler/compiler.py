@@ -1,5 +1,12 @@
 """MPO-based circuit compiler: compile a target QuantumCircuit into a
-shallower brickwall circuit."""
+shallower brickwall circuit.
+
+Two optimization methods:
+- "polar": polar decomposition sweeps (Gibbs & Cincio 2025).
+  Analytic optimal update per gate, no learning rate.
+- "adam": Riemannian ADAM (rqcopt, INMLe/rqcopt-mpo). Gradient-based,
+  requires learning rate tuning.
+"""
 
 import numpy as np
 from .brickwall import (
@@ -8,12 +15,13 @@ from .brickwall import (
 from .compress import tn_to_mpo, _contract_to_exact_mpo
 from .mpo_ops import mpo_to_arrays
 from .gradient import compute_cost_and_grad
-from .optim import riemannian_adam
+from .optim import riemannian_adam, polar_sweeps
 
 
 def compile_circuit(target, ansatz_depth, compress_fraction=0.0,
                     tol=1e-2, max_bond=None, max_iter=500, lr=1e-3,
-                    first_odd=True, init_gates=None, callback=None):
+                    method="polar", first_odd=True,
+                    init_gates=None, callback=None):
     """Compile a target QuantumCircuit into a brickwall circuit at ansatz_depth.
 
     Args:
@@ -69,8 +77,14 @@ def compile_circuit(target, ansatz_depth, compress_fraction=0.0,
             target_arrays, gates, n_qubits, ansatz_depth,
             max_bond=max_bond or 128, first_odd=first_odd)
 
-    opt_gates, cost_history = riemannian_adam(
-        cost_grad_fn, init_gates, max_iter=max_iter, lr=lr, callback=callback)
+    if method == "polar":
+        opt_gates, cost_history = polar_sweeps(
+            cost_grad_fn, init_gates, max_iter=max_iter, callback=callback)
+    elif method == "adam":
+        opt_gates, cost_history = riemannian_adam(
+            cost_grad_fn, init_gates, max_iter=max_iter, lr=lr, callback=callback)
+    else:
+        raise ValueError(f"Unknown method: {method}. Use 'polar' or 'adam'.")
 
     compiled = gates_to_circuit(opt_gates, n_qubits, ansatz)
     return compiled, {
