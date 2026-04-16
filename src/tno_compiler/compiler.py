@@ -9,8 +9,11 @@ from .optim import riemannian_adam
 def compile_circuit(target_mpo, n_qubits, n_layers, max_bond=128,
                     max_iter=500, lr=1e-3, first_odd=True,
                     init_gates=None, callback=None):
-    """Compile a target MPO (from brickwall.target_mpo) into brickwall gates.
-    Returns (gates, cost_history)."""
+    """Compile a target MPO into brickwall gates.
+
+    target_mpo: quimb MPO (first element of brickwall.target_mpo() tuple).
+    Returns (gates, cost_history).
+    """
     target_arrays = mpo_to_arrays(target_mpo)
 
     if init_gates is None:

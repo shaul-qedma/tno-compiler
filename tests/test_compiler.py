@@ -13,8 +13,8 @@ seed_st = st.integers(0, 9999)
 
 def _fidelity(tg, compiled_gates, n, d):
     """|Tr(V†U)|²/d² via dense matrices from quimb MPOs (testing only)."""
-    V = np.array(circuit_to_mpo(tg, n, d).to_dense())
-    U = np.array(circuit_to_mpo(compiled_gates, n, d).to_dense())
+    V = np.array(circuit_to_mpo(tg, n, d)[0].to_dense())
+    U = np.array(circuit_to_mpo(compiled_gates, n, d)[0].to_dense())
     d2 = (2 ** n) ** 2
     return abs(np.trace(V.conj().T @ U)) ** 2 / d2
 
@@ -24,8 +24,8 @@ def _fidelity(tg, compiled_gates, n, d):
 def test_self_compilation(n, d, seed):
     """Initializing with the exact answer should preserve fidelity ~1."""
     tg = random_haar_gates(n, d, seed=seed)
-    gates, _ = compile_circuit(target_mpo(tg, n, d), n, d,
-                               max_iter=10, lr=1e-3, init_gates=tg)
+    tmpo, _ = target_mpo(tg, n, d)
+    gates, _ = compile_circuit(tmpo, n, d, max_iter=10, lr=1e-3, init_gates=tg)
     assert _fidelity(tg, gates, n, d) > 0.999
 
 
@@ -34,8 +34,8 @@ def test_self_compilation(n, d, seed):
 def test_fidelity_consistent_with_cost(n, d, seed):
     """Process fidelity should be consistent with the optimizer's cost."""
     tg = random_haar_gates(n, d, seed=seed)
-    gates, history = compile_circuit(target_mpo(tg, n, d), n, d,
-                                     max_iter=100, lr=5e-3)
+    tmpo, _ = target_mpo(tg, n, d)
+    gates, history = compile_circuit(tmpo, n, d, max_iter=100, lr=5e-3)
     fid = _fidelity(tg, gates, n, d)
     lower_bound = max(0, 1 - history[-1] / 2) ** 2
     assert fid >= lower_bound - 1e-4, (

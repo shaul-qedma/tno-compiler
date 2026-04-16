@@ -31,7 +31,7 @@ def test_mpo_faithful(n, d, seed):
     """circuit_to_mpo should be close to the exact TN."""
     gates = random_haar_gates(n, d, seed=seed)
     tn = circuit_to_tn(gates, n, d)
-    mpo = circuit_to_mpo(gates, n, d)
+    mpo, err = circuit_to_mpo(gates, n, d)
     assert mpo.distance_normalized(tn) < 1e-6
 
 
@@ -40,7 +40,8 @@ def test_mpo_faithful(n, d, seed):
 def test_mpo_is_unitary(n, d, seed):
     """The MPO should represent a unitary operator."""
     gates = random_haar_gates(n, d, seed=seed)
-    U = np.array(circuit_to_mpo(gates, n, d).to_dense())
+    mpo, _ = circuit_to_mpo(gates, n, d)
+    U = np.array(mpo.to_dense())
     assert np.allclose(U @ U.conj().T, np.eye(2**n), atol=1e-8)
 
 
@@ -49,6 +50,6 @@ def test_mpo_is_unitary(n, d, seed):
 def test_target_is_adjoint(n, d, seed):
     """target_mpo should be the adjoint of circuit_to_mpo."""
     gates = random_haar_gates(n, d, seed=seed)
-    V = np.array(circuit_to_mpo(gates, n, d).to_dense())
-    Vd = np.array(target_mpo(gates, n, d).to_dense())
+    V = np.array(circuit_to_mpo(gates, n, d)[0].to_dense())
+    Vd = np.array(target_mpo(gates, n, d)[0].to_dense())
     assert np.allclose(Vd, V.conj().T, atol=1e-8)

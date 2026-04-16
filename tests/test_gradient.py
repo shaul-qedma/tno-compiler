@@ -15,8 +15,8 @@ seed_st = st.integers(0, 9999)
 
 def _exact_overlap(tg, cg, n, d):
     """Tr(V†U) via dense matrices from quimb MPOs (testing only)."""
-    V = np.array(circuit_to_mpo(tg, n, d).to_dense())
-    U = np.array(circuit_to_mpo(cg, n, d).to_dense())
+    V = np.array(circuit_to_mpo(tg, n, d)[0].to_dense())
+    U = np.array(circuit_to_mpo(cg, n, d)[0].to_dense())
     return np.trace(V.conj().T @ U)
 
 
@@ -27,8 +27,8 @@ def test_overlap_matches_exact(n, d, seed):
     tg = random_haar_gates(n, d, seed=seed)
     cg = random_haar_gates(n, d, seed=seed + 5000)
 
-    cost, _ = compute_cost_and_grad(
-        mpo_to_arrays(target_mpo(tg, n, d)), cg, n, d)
+    tmpo, _ = target_mpo(tg, n, d)
+    cost, _ = compute_cost_and_grad(mpo_to_arrays(tmpo), cg, n, d)
     exact_cost = 2.0 - 2.0 * _exact_overlap(tg, cg, n, d).real / (2 ** n)
 
     assert abs(cost - exact_cost) < 1e-4, f"cost={cost}, exact={exact_cost}"
@@ -42,8 +42,8 @@ def test_gradient_finite_difference(n, d, seed):
     tg = random_haar_gates(n, d, seed=seed)
     cg = random_haar_gates(n, d, seed=seed + 5000)
 
-    _, grad = compute_cost_and_grad(
-        mpo_to_arrays(target_mpo(tg, n, d)), cg, n, d)
+    tmpo, _ = target_mpo(tg, n, d)
+    _, grad = compute_cost_and_grad(mpo_to_arrays(tmpo), cg, n, d)
 
     rng = np.random.RandomState(seed)
     g_idx = rng.randint(0, len(cg))

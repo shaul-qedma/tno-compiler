@@ -64,16 +64,24 @@ def circuit_to_mpo(gates, n_qubits, n_layers, first_odd=True,
                    max_bond=None, cutoff=1e-10, method="dm"):
     """Convert brickwall gates to a quimb MPO by compressing the depth direction.
 
-    1. Build the circuit as a 2D TN (split-gate: one tensor per qubit per gate)
-    2. Compress into an MPO (one tensor per qubit) via tensor_network_1d_compress
+    Uses cutoff_mode='abs' so each SVD discards singular values < per_bond_cutoff,
+    giving operator norm error ≤ per_bond_cutoff per bond. By triangle inequality,
+    total operator norm error ≤ cutoff.
+
+    Returns (mpo, error_bound).
     """
     tn = circuit_to_tn(gates, n_qubits, n_layers, first_odd)
-    kwargs = dict(cutoff=cutoff, method=method)
+    n_bonds = max(n_qubits - 1, 1)
+    kwargs = dict(
+        cutoff=cutoff / n_bonds,
+        cutoff_mode="abs",
+        method=method,
+    )
     if max_bond is not None:
         kwargs["max_bond"] = max_bond
     mpo = qtn.tensor_network_1d_compress(tn, **kwargs)
     mpo.view_as_(qtn.MatrixProductOperator, cyclic=False, L=n_qubits)
-    return mpo
+    return mpo, cutoff
 
 
 def mpo_to_arrays(mpo):
@@ -122,14 +130,13 @@ def target_mpo(gates, n_qubits, n_layers, first_odd=True,
                max_bond=None, cutoff=1e-10, method="dm"):
     """Target MPO for compilation (stores V†).
 
-    Builds V as an MPO via circuit_to_mpo, then takes the adjoint
-    (swap upper/lower indices, conjugate).
+    Returns (mpo, error_bound) where error_bound is the operator norm
+    bound on ||V† - V†_mpo|| from MPO compression.
     """
-    mpo = circuit_to_mpo(gates, n_qubits, n_layers, first_odd,
-                         max_bond, cutoff, method)
-    # Adjoint: swap upper (k) and lower (b) indices, conjugate
+    mpo, error_bound = circuit_to_mpo(gates, n_qubits, n_layers, first_odd,
+                                      max_bond, cutoff, method)
     reindex_map = {}
     for i in range(n_qubits):
         reindex_map[f"k{i}"] = f"b{i}"
         reindex_map[f"b{i}"] = f"k{i}"
-    return mpo.conj().reindex(reindex_map)
+    return mpo.conj().reindex(reindex_map), error_bound
