@@ -187,14 +187,13 @@ def mpo_to_arrays(mpo):
 
 
 def target_mpo(gates, n_qubits, n_layers, first_odd=True,
-               max_bond=None, cutoff=1e-10):
+               max_bond=None, tol=1e-10):
     """Target MPO for compilation (stores V†).
 
-    Returns (mpo, error_bound) where error_bound is the operator norm
-    bound on ||V† - V†_mpo|| from MPO compression.
+    Returns (mpo, error_bound).
     """
     mpo, error_bound = circuit_to_mpo(gates, n_qubits, n_layers, first_odd,
-                                      max_bond, cutoff)
+                                      max_bond, tol)
     reindex_map = {}
     for i in range(n_qubits):
         reindex_map[f"k{i}"] = f"b{i}"
