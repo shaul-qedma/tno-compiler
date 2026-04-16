@@ -55,11 +55,9 @@ def compile_ensemble(target_gates, n_qubits, n_layers, n_circuits=5,
     weights, qp_val = ensemble_qp(gram, overlaps)
 
     # Certification (SPEC.md Lemma D)
-    # delta_ens = ||Σ p_i U_i - V||_F (from QP + compression)
+    # ||Σ p_i U_i - V||_F² = p^T G p - 2 p^T c + Tr(V†V) = qp_val + d
     d = 2 ** n_qubits
-    # QP gives: Σ p_i p_j Re Tr(U_i†U_j) - 2 Σ p_i Re Tr(U_i†V) = qp_val * 2
-    # ||Σ p_i U_i - V||_F² = above + Tr(V†V) = 2*qp_val + d
-    ensemble_frob_sq = 2 * qp_val + d
+    ensemble_frob_sq = qp_val + d
     ensemble_frob = np.sqrt(max(ensemble_frob_sq, 0))
 
     # Individual Frobenius errors: ||U_i - V||_F = sqrt(2d - 2 Re Tr(U_i†V))

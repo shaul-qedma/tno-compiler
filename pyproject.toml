@@ -16,6 +16,7 @@ test = [
     "pytest>=7.0",
     "hypothesis>=6.0",
     "qiskit>=1.0",
+    "cvxpy>=1.4",
 ]
 
 [tool.setuptools.packages.find]
