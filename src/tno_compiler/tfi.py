@@ -9,8 +9,8 @@ import numpy as np
 from qiskit.circuit import QuantumCircuit
 
 
-def tfi_trotter_circuit(n_qubits, J, g, h, dt, steps):
-    """Generate a first-order Trotterized TFI circuit.
+def tfi_trotter_circuit(n_qubits, J, g, h, dt, steps, order=1):
+    """Generate a Trotterized TFI circuit.
 
     Args:
         n_qubits: number of qubits.
@@ -19,10 +19,13 @@ def tfi_trotter_circuit(n_qubits, J, g, h, dt, steps):
         h: longitudinal field (Z).
         dt: Trotter step size.
         steps: number of Trotter steps.
+        order: Trotter order (1 supported, 2/4 TODO).
 
     Returns:
         QuantumCircuit implementing exp(-i H t) with t = dt * steps.
     """
+    if order != 1:
+        raise NotImplementedError(f"Trotter order {order} not yet implemented (TODO)")
     qc = QuantumCircuit(n_qubits)
     for _ in range(steps):
         _trotter_step(qc, n_qubits, J, g, h, dt)
