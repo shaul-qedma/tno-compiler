@@ -61,27 +61,77 @@ def circuit_to_tn(gates, n_qubits, n_layers, first_odd=True):
 
 
 def circuit_to_mpo(gates, n_qubits, n_layers, first_odd=True,
-                   max_bond=None, cutoff=1e-10, method="dm"):
+                   max_bond=None, cutoff=1e-10):
     """Convert brickwall gates to a quimb MPO by compressing the depth direction.
 
-    Uses cutoff_mode='abs' so each SVD discards singular values < per_bond_cutoff,
-    giving operator norm error ≤ per_bond_cutoff per bond. By triangle inequality,
-    total operator norm error ≤ cutoff.
+    Two-pass compression with tracked truncation error:
+    1. Contract each site group and canonicalize rightward (exact).
+    2. Sweep left, SVD-compressing each bond. Track the first discarded
+       singular value at each bond (= operator norm error per bond).
+
+    Total operator norm error ≤ sum of per-bond errors (triangle inequality).
 
     Returns (mpo, error_bound).
     """
     tn = circuit_to_tn(gates, n_qubits, n_layers, first_odd)
-    n_bonds = max(n_qubits - 1, 1)
-    kwargs = dict(
-        cutoff=cutoff / n_bonds,
-        cutoff_mode="abs",
-        method=method,
-    )
-    if max_bond is not None:
-        kwargs["max_bond"] = max_bond
-    mpo = qtn.tensor_network_1d_compress(tn, **kwargs)
-    mpo.view_as_(qtn.MatrixProductOperator, cyclic=False, L=n_qubits)
-    return mpo, cutoff
+    site_tags = tn.site_tags
+
+    # Pass 1: contract each site group into a single tensor
+    for tag in site_tags:
+        tn ^= tag
+    tn.fuse_multibonds_()
+    # Cast to MPO and ensure all adjacent sites share a bond
+    tn.view_as_(qtn.MatrixProductOperator, cyclic=False, L=n_qubits)
+    tn.fill_empty_sites_()
+    tn.ensure_bonds_exist()
+
+    # Canonicalize rightward (QR sweep)
+    for i in range(len(site_tags) - 1):
+        tn.canonize_between(site_tags[i], site_tags[i + 1])
+
+    # Pass 2: sweep left, SVD-compress each bond, track operator norm error.
+    # We do the SVD ourselves so we see the full spectrum including discarded values.
+    total_error = 0.0
+    for i in range(len(site_tags) - 1, 0, -1):
+        ta = tn[site_tags[i - 1]]
+        tb = tn[site_tags[i]]
+        bix = list(qtn.tensor_core.bonds(ta, tb))
+        if not bix:
+            continue
+        assert len(bix) == 1
+        bnd = bix[0]
+
+        # Contract pair, SVD, truncate
+        tc = ta @ tb
+        left_inds = [ix for ix in ta.inds if ix != bnd]
+        u, s, v = tc.split(
+            left_inds=left_inds, bond_ind=bnd,
+            absorb=None, get="tensors", cutoff=0.0,
+        )
+        all_svs = s.data
+        keep = len(all_svs)
+        if max_bond is not None:
+            keep = min(keep, max_bond)
+        if cutoff > 0:
+            keep = min(keep, int(np.sum(all_svs >= cutoff)))
+            keep = max(keep, 1)  # keep at least 1
+
+        if keep < len(all_svs):
+            total_error += float(all_svs[keep])  # first discarded SV
+
+        # Truncate and absorb into left tensor
+        kept = slice(None, keep)
+        new_bnd = bnd
+        u_data = u.data[..., kept]
+        s_data = all_svs[kept]
+        v_data = v.data[kept, ...]
+
+        left_data = np.einsum("...i,i->...i", u_data, s_data)
+        ta.modify(data=left_data, inds=u.inds)
+        tb.modify(data=v_data, inds=v.inds)
+
+    tn.view_as_(qtn.MatrixProductOperator, cyclic=False, L=n_qubits)
+    return tn, total_error
 
 
 def mpo_to_arrays(mpo):
@@ -127,14 +177,14 @@ def mpo_to_arrays(mpo):
 
 
 def target_mpo(gates, n_qubits, n_layers, first_odd=True,
-               max_bond=None, cutoff=1e-10, method="dm"):
+               max_bond=None, cutoff=1e-10):
     """Target MPO for compilation (stores V†).
 
     Returns (mpo, error_bound) where error_bound is the operator norm
     bound on ||V† - V†_mpo|| from MPO compression.
     """
     mpo, error_bound = circuit_to_mpo(gates, n_qubits, n_layers, first_odd,
-                                      max_bond, cutoff, method)
+                                      max_bond, cutoff)
     reindex_map = {}
     for i in range(n_qubits):
         reindex_map[f"k{i}"] = f"b{i}"
