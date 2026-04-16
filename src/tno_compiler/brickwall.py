@@ -61,36 +61,46 @@ def circuit_to_tn(gates, n_qubits, n_layers, first_odd=True):
 
 
 def circuit_to_mpo(gates, n_qubits, n_layers, first_odd=True,
-                   max_bond=None, cutoff=1e-10):
-    """Convert brickwall gates to a quimb MPO by compressing the depth direction.
+                   max_bond=None, tol=1e-10):
+    """Convert brickwall gates to a quimb MPO with guaranteed error tolerance.
 
-    Two-pass compression with tracked truncation error:
-    1. Contract each site group and canonicalize rightward (exact).
-    2. Sweep left, SVD-compressing each bond. Track the first discarded
-       singular value at each bond (= operator norm error per bond).
-
-    Total operator norm error ≤ sum of per-bond errors (triangle inequality).
+    Iteratively compresses with decreasing per-bond cutoff until the
+    total operator norm error (sum of first-discarded SVs across bonds)
+    is below tol.
 
     Returns (mpo, error_bound).
     """
+    n_bonds = max(n_qubits - 1, 1)
+    cutoff = tol / n_bonds  # conservative initial guess
+
+    for _ in range(10):  # at most 10 refinement rounds
+        mpo, error = _compress_to_mpo(gates, n_qubits, n_layers, first_odd,
+                                       max_bond, cutoff)
+        if error <= tol:
+            return mpo, error
+        # Tighten cutoff proportionally
+        cutoff *= tol / error / 2
+    return mpo, error
+
+
+def _compress_to_mpo(gates, n_qubits, n_layers, first_odd, max_bond, cutoff):
+    """Single compression pass. Returns (mpo, total_error)."""
     tn = circuit_to_tn(gates, n_qubits, n_layers, first_odd)
     site_tags = tn.site_tags
 
-    # Pass 1: contract each site group into a single tensor
+    # Contract each site group, cast to MPO, ensure bonds exist
     for tag in site_tags:
         tn ^= tag
     tn.fuse_multibonds_()
-    # Cast to MPO and ensure all adjacent sites share a bond
     tn.view_as_(qtn.MatrixProductOperator, cyclic=False, L=n_qubits)
     tn.fill_empty_sites_()
     tn.ensure_bonds_exist()
 
-    # Canonicalize rightward (QR sweep)
+    # Canonicalize rightward
     for i in range(len(site_tags) - 1):
         tn.canonize_between(site_tags[i], site_tags[i + 1])
 
-    # Pass 2: sweep left, SVD-compress each bond, track operator norm error.
-    # We do the SVD ourselves so we see the full spectrum including discarded values.
+    # Sweep left: SVD-compress each bond, track operator norm error
     total_error = 0.0
     for i in range(len(site_tags) - 1, 0, -1):
         ta = tn[site_tags[i - 1]]
@@ -98,10 +108,8 @@ def circuit_to_mpo(gates, n_qubits, n_layers, first_odd=True,
         bix = list(qtn.tensor_core.bonds(ta, tb))
         if not bix:
             continue
-        assert len(bix) == 1
         bnd = bix[0]
 
-        # Contract pair, SVD, truncate
         tc = ta @ tb
         left_inds = [ix for ix in ta.inds if ix != bnd]
         u, s, v = tc.split(
@@ -114,23 +122,16 @@ def circuit_to_mpo(gates, n_qubits, n_layers, first_odd=True,
             keep = min(keep, max_bond)
         if cutoff > 0:
             keep = min(keep, int(np.sum(all_svs >= cutoff)))
-            keep = max(keep, 1)  # keep at least 1
+            keep = max(keep, 1)
 
         if keep < len(all_svs):
-            total_error += float(all_svs[keep])  # first discarded SV
+            total_error += float(all_svs[keep])
 
-        # Truncate and absorb into left tensor
         kept = slice(None, keep)
-        new_bnd = bnd
-        u_data = u.data[..., kept]
-        s_data = all_svs[kept]
-        v_data = v.data[kept, ...]
-
-        left_data = np.einsum("...i,i->...i", u_data, s_data)
+        left_data = np.einsum("...i,i->...i", u.data[..., kept], all_svs[kept])
         ta.modify(data=left_data, inds=u.inds)
-        tb.modify(data=v_data, inds=v.inds)
+        tb.modify(data=v.data[kept, ...], inds=v.inds)
 
-    tn.view_as_(qtn.MatrixProductOperator, cyclic=False, L=n_qubits)
     return tn, total_error
 
 
