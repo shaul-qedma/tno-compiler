@@ -15,7 +15,7 @@ from .ensemble import ensemble_qp
 
 def compile_ensemble(target, ansatz_depth, n_circuits=5,
                      tol=1e-2, compress_fraction=0.0, max_bond=None,
-                     max_iter=200, lr=5e-3, first_odd=True, seed=0):
+                     max_iter=200, lr=2e-2, first_odd=True, seed=0):
     """Compile an ensemble of brickwall circuits approximating a target.
 
     Args:
@@ -36,9 +36,9 @@ def compile_ensemble(target, ansatz_depth, n_circuits=5,
     compile_errors = []
     compress_error = 0.0
     for i in range(n_circuits):
-        # Perturbed identity init: small random rotation for diversity
-        init_tensors = _perturbed_identity(n, ansatz_depth, first_odd,
-                                           scale=0.01, seed=seed + 1000 * i)
+        # Random Haar init for maximum diversity across ensemble members
+        init_qc = random_brickwall(n, ansatz_depth, first_odd, seed=seed + 1000 * i)
+        init_tensors = _qc_to_gate_tensors(init_qc)
         compiled, info = compile_circuit(
             target, ansatz_depth, compress_fraction=compress_fraction,
             tol=tol, max_bond=max_bond, max_iter=max_iter, lr=lr,
