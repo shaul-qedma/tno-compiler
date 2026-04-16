@@ -1,4 +1,6 @@
-"""Compress an arbitrary quimb TN into an MPO with guaranteed operator norm tolerance.
+"""Compress an arbitrary quimb TN into an MPO with guaranteed tolerance.
+
+Supports both operator norm and Frobenius norm error guarantees.
 
 Three phases:
 1. Contract site groups into a single tensor per site (exact MPO).
@@ -10,22 +12,22 @@ import numpy as np
 import quimb.tensor as qtn
 
 
-def tn_to_mpo(tn, n_sites, max_bond=None, tol=1e-10):
+def tn_to_mpo(tn, n_sites, max_bond=None, tol=1e-10, norm="operator"):
     """Compress a quimb TN (with site tags) into an MPO.
 
-    Returns (mpo, error_bound) where error_bound ≤ tol is the actual
-    sum of first-discarded singular values across all bonds (operator
-    norm error via triangle inequality).
+    Args:
+        norm: "operator" or "frobenius" -- which norm to bound.
+
+    Returns (mpo, error_bound) where error_bound ≤ tol.
     """
     mpo = _contract_to_exact_mpo(tn, n_sites)
     spectra = _collect_spectra(mpo)
-    cutoff = _find_optimal_cutoff(spectra, tol, max_bond)
+    cutoff = _find_optimal_cutoff(spectra, tol, max_bond, norm)
     mpo.compress(max_bond=max_bond, cutoff=cutoff, cutoff_mode="abs")
-    return mpo, _compute_error(spectra, cutoff, max_bond)
+    return mpo, _compute_error(spectra, cutoff, max_bond, norm)
 
 
 def _contract_to_exact_mpo(tn, n_sites):
-    """Contract a site-tagged TN into an exact (untruncated) MPO."""
     for tag in tn.site_tags:
         tn ^= tag
     tn.fuse_multibonds_()
@@ -36,7 +38,6 @@ def _contract_to_exact_mpo(tn, n_sites):
 
 
 def _collect_spectra(mpo):
-    """SVD each bond, return list of singular value arrays."""
     spectra = []
     for i in range(mpo.L - 1):
         ta = mpo[mpo.site_tags[i]]
@@ -53,28 +54,38 @@ def _collect_spectra(mpo):
     return spectra
 
 
-def _find_optimal_cutoff(spectra, tol, max_bond):
-    """Binary search for the largest cutoff with total error ≤ tol."""
+def _find_optimal_cutoff(spectra, tol, max_bond, norm):
     all_svs = np.concatenate([s[1:] for s in spectra if len(s) > 1])
-    if len(all_svs) == 0 or _compute_error(spectra, 0.0, max_bond) <= tol:
+    if len(all_svs) == 0 or _compute_error(spectra, 0.0, max_bond, norm) <= tol:
         return 0.0
     lo, hi = 0.0, float(np.max(all_svs))
     for _ in range(64):
         mid = (lo + hi) / 2
-        if _compute_error(spectra, mid, max_bond) <= tol:
+        if _compute_error(spectra, mid, max_bond, norm) <= tol:
             lo = mid
         else:
             hi = mid
     return lo
 
 
-def _compute_error(spectra, cutoff, max_bond):
-    """Sum of first-discarded SVs across all bonds for a given cutoff."""
+def _compute_error(spectra, cutoff, max_bond, norm):
+    """Compute total error for a given per-bond cutoff.
+
+    operator: sum of first-discarded SVs (triangle inequality).
+    frobenius: sqrt of sum of squared discarded SVs across all bonds.
+    """
     total = 0.0
     for svs in spectra:
         cap = min(len(svs), max_bond) if max_bond else len(svs)
         keep = min(cap, int(np.sum(svs >= cutoff))) if cutoff > 0 else cap
         keep = max(keep, 1)
-        if keep < len(svs):
-            total += float(svs[keep])
+        discarded = svs[keep:]
+        if len(discarded) == 0:
+            continue
+        if norm == "operator":
+            total += float(discarded[0])
+        elif norm == "frobenius":
+            total += float(np.sum(discarded ** 2))
+    if norm == "frobenius":
+        total = np.sqrt(total)
     return total

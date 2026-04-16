@@ -57,18 +57,18 @@ def circuit_to_tn(gates, n_qubits, n_layers, first_odd=True):
 
 
 def circuit_to_mpo(gates, n_qubits, n_layers, first_odd=True,
-                   max_bond=None, tol=1e-10):
-    """Brickwall gates → quimb MPO with guaranteed operator norm tolerance."""
+                   max_bond=None, tol=1e-10, norm="operator"):
+    """Brickwall gates → quimb MPO with guaranteed tolerance."""
     from .compress import tn_to_mpo
     tn = circuit_to_tn(gates, n_qubits, n_layers, first_odd)
-    return tn_to_mpo(tn, n_qubits, max_bond=max_bond, tol=tol)
+    return tn_to_mpo(tn, n_qubits, max_bond=max_bond, tol=tol, norm=norm)
 
 
 def target_mpo(gates, n_qubits, n_layers, first_odd=True,
-               max_bond=None, tol=1e-10):
+               max_bond=None, tol=1e-10, norm="operator"):
     """Target MPO for compilation (stores V†). Returns (mpo, error_bound)."""
     mpo, error = circuit_to_mpo(gates, n_qubits, n_layers, first_odd,
-                                max_bond, tol)
+                                max_bond, tol, norm)
     reindex_map = {f"k{i}": f"b{i}" for i in range(n_qubits)}
     reindex_map.update({f"b{i}": f"k{i}" for i in range(n_qubits)})
     return mpo.conj().reindex(reindex_map), error
