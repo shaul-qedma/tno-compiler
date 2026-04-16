@@ -4,9 +4,8 @@ import numpy as np
 from hypothesis import given, settings
 
 from conftest import n_qubits_st, n_layers_st, seed_st
-from tno_compiler.brickwall import (
-    random_haar_gates, target_mpo, circuit_to_mpo, mpo_to_arrays,
-)
+from tno_compiler.brickwall import random_haar_gates, target_mpo, circuit_to_mpo
+from tno_compiler.mpo_ops import mpo_to_arrays
 from tno_compiler.gradient import compute_cost_and_grad
 
 

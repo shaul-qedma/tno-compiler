@@ -1,11 +1,45 @@
 """MPO array operations for the gradient computation.
 
 The gradient engine works with raw numpy arrays in (bond_l, k, b, bond_r)
-format. These primitives handle merging, splitting, and canonicalization.
+format. This module also provides the bridge from quimb MPOs to this format.
 """
 
 import numpy as np
 from scipy.linalg import rq
+
+
+def mpo_to_arrays(mpo):
+    """Convert a quimb MPO to list of (bond_l, k, b, bond_r) numpy arrays.
+
+    Permutes axes from quimb's arbitrary order to the fixed convention
+    needed by the gradient computation.
+    """
+    arrays = []
+    for i in range(mpo.L):
+        t = mpo[i]
+        inds = t.inds
+        ax_k = inds.index(f"k{i}")
+        ax_b = inds.index(f"b{i}")
+        bond_axes = [j for j in range(len(inds)) if j != ax_k and j != ax_b]
+
+        if i == 0:
+            perm = (ax_k, ax_b, bond_axes[0])
+            data = t.data.transpose(perm)[np.newaxis, ...]
+        elif i == mpo.L - 1:
+            perm = (bond_axes[0], ax_k, ax_b)
+            data = t.data.transpose(perm)[..., np.newaxis]
+        else:
+            bond_inds = [inds[j] for j in bond_axes]
+            prev_inds = set(mpo[i - 1].inds)
+            if bond_inds[0] in prev_inds:
+                ax_bl, ax_br = bond_axes[0], bond_axes[1]
+            else:
+                ax_bl, ax_br = bond_axes[1], bond_axes[0]
+            perm = (ax_bl, ax_k, ax_b, ax_br)
+            data = t.data.transpose(perm)
+
+        arrays.append(np.array(data, dtype=complex))
+    return arrays
 
 
 def identity_mpo(n_sites):

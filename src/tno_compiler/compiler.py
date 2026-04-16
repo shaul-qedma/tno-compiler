@@ -1,7 +1,8 @@
 """MPO-based brickwall circuit compiler."""
 
 import numpy as np
-from .brickwall import total_gates, mpo_to_arrays
+from .brickwall import total_gates
+from .mpo_ops import mpo_to_arrays
 from .gradient import compute_cost_and_grad
 from .optim import riemannian_adam
 
