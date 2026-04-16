@@ -64,75 +64,84 @@ def circuit_to_mpo(gates, n_qubits, n_layers, first_odd=True,
                    max_bond=None, tol=1e-10):
     """Convert brickwall gates to a quimb MPO with guaranteed error tolerance.
 
-    Iteratively compresses with decreasing per-bond cutoff until the
-    total operator norm error (sum of first-discarded SVs across bonds)
-    is below tol.
+    Three phases:
+    1. Contract the 2D circuit TN into an exact MPO (via quimb).
+    2. Collect the SVD spectrum at each bond (cheap: just SVD the bonds).
+    3. Allocate error budget optimally via binary search on a global cutoff,
+       then compress with that cutoff via quimb.
 
     Returns (mpo, error_bound).
     """
-    n_bonds = max(n_qubits - 1, 1)
-    cutoff = tol / n_bonds  # conservative initial guess
-
-    for _ in range(10):  # at most 10 refinement rounds
-        mpo, error = _compress_to_mpo(gates, n_qubits, n_layers, first_odd,
-                                       max_bond, cutoff)
-        if error <= tol:
-            return mpo, error
-        # Tighten cutoff proportionally
-        cutoff *= tol / error / 2
-    return mpo, error
-
-
-def _compress_to_mpo(gates, n_qubits, n_layers, first_odd, max_bond, cutoff):
-    """Single compression pass. Returns (mpo, total_error)."""
+    # Phase 1: exact MPO (no truncation)
     tn = circuit_to_tn(gates, n_qubits, n_layers, first_odd)
     site_tags = tn.site_tags
-
-    # Contract each site group, cast to MPO, ensure bonds exist
     for tag in site_tags:
         tn ^= tag
     tn.fuse_multibonds_()
     tn.view_as_(qtn.MatrixProductOperator, cyclic=False, L=n_qubits)
     tn.fill_empty_sites_()
     tn.ensure_bonds_exist()
+    mpo = tn
 
-    # Canonicalize rightward
-    for i in range(len(site_tags) - 1):
-        tn.canonize_between(site_tags[i], site_tags[i + 1])
+    # Phase 2: collect bond spectra
+    spectra = _collect_spectra(mpo)
 
-    # Sweep left: SVD-compress each bond, track operator norm error
-    total_error = 0.0
-    for i in range(len(site_tags) - 1, 0, -1):
-        ta = tn[site_tags[i - 1]]
-        tb = tn[site_tags[i]]
+    # Phase 3: allocate budget and compress
+    cutoff = _find_optimal_cutoff(spectra, tol, max_bond)
+    mpo.compress(max_bond=max_bond, cutoff=cutoff, cutoff_mode="abs")
+
+    # Compute actual error from the spectra and chosen cutoff
+    total_error = _compute_error(spectra, cutoff, max_bond)
+    return mpo, total_error
+
+
+def _collect_spectra(mpo):
+    """Collect the singular value spectrum at each bond of an MPO."""
+    spectra = []
+    for i in range(mpo.L - 1):
+        ta = mpo[mpo.site_tags[i]]
+        tb = mpo[mpo.site_tags[i + 1]]
         bix = list(qtn.tensor_core.bonds(ta, tb))
         if not bix:
+            spectra.append(np.array([1.0]))
             continue
         bnd = bix[0]
-
+        # SVD the bond to get the spectrum (don't modify tensors)
         tc = ta @ tb
         left_inds = [ix for ix in ta.inds if ix != bnd]
-        u, s, v = tc.split(
-            left_inds=left_inds, bond_ind=bnd,
-            absorb=None, get="tensors", cutoff=0.0,
-        )
-        all_svs = s.data
-        keep = len(all_svs)
-        if max_bond is not None:
-            keep = min(keep, max_bond)
-        if cutoff > 0:
-            keep = min(keep, int(np.sum(all_svs >= cutoff)))
-            keep = max(keep, 1)
+        _, s, _ = tc.split(left_inds=left_inds, bond_ind=bnd,
+                           absorb=None, get="tensors", cutoff=0.0)
+        spectra.append(np.array(s.data))
+    return spectra
 
-        if keep < len(all_svs):
-            total_error += float(all_svs[keep])
 
-        kept = slice(None, keep)
-        left_data = np.einsum("...i,i->...i", u.data[..., kept], all_svs[kept])
-        ta.modify(data=left_data, inds=u.inds)
-        tb.modify(data=v.data[kept, ...], inds=v.inds)
+def _find_optimal_cutoff(spectra, tol, max_bond):
+    """Binary search for the largest per-bond SV cutoff such that
+    the total operator norm error ≤ tol."""
+    all_svs = np.concatenate([s[1:] for s in spectra if len(s) > 1])
+    if len(all_svs) == 0 or _compute_error(spectra, 0.0, max_bond) <= tol:
+        return 0.0
 
-    return tn, total_error
+    lo, hi = 0.0, float(np.max(all_svs))
+    for _ in range(64):
+        mid = (lo + hi) / 2
+        if _compute_error(spectra, mid, max_bond) <= tol:
+            lo = mid
+        else:
+            hi = mid
+    return lo
+
+
+def _compute_error(spectra, cutoff, max_bond):
+    """Total operator norm error for a given per-bond cutoff."""
+    total = 0.0
+    for svs in spectra:
+        cap = min(len(svs), max_bond) if max_bond else len(svs)
+        keep = min(cap, int(np.sum(svs >= cutoff))) if cutoff > 0 else cap
+        keep = max(keep, 1)
+        if keep < len(svs):
+            total += float(svs[keep])
+    return total
 
 
 def mpo_to_arrays(mpo):
