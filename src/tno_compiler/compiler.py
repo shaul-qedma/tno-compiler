@@ -1,12 +1,11 @@
 """MPO-based brickwall circuit compiler.
 
-Given a target unitary (as a quimb MPO) and ansatz depth, finds
-brickwall gates maximizing |Tr(V†U)|² via Riemannian ADAM on U(4).
+Given a target MPO (list of arrays from target_mpo()) and ansatz depth,
+finds brickwall gates maximizing Re Tr(V†U) via Riemannian ADAM on U(4).
 """
 
 import numpy as np
-from .brickwall import total_gates, partition_gates
-from .mpo_ops import matrix_to_mpo
+from .brickwall import total_gates
 from .gradient import compute_cost_and_grad
 from .optim import riemannian_adam
 
@@ -17,9 +16,8 @@ def compile_circuit(target_mpo, n_qubits, n_layers, max_bond=128,
     """Compile a target MPO into a brickwall circuit.
 
     Args:
-        target_mpo: quimb MatrixProductOperator.
-        n_qubits: number of qubits.
-        n_layers: depth of brickwall ansatz.
+        target_mpo: list of (bl, k, b, br) arrays from brickwall.target_mpo().
+        n_qubits, n_layers: circuit dimensions.
         max_bond: max MPO bond dimension during contraction.
         max_iter: optimization iterations.
         lr: learning rate.
@@ -28,21 +26,17 @@ def compile_circuit(target_mpo, n_qubits, n_layers, max_bond=128,
 
     Returns:
         gates: list of (2,2,2,2) numpy arrays.
-        cost_history: list of costs.
+        cost_history: list of cost values.
     """
-    target_arrays = target_mpo  # already a list of arrays
-
     if init_gates is None:
         ng = total_gates(n_qubits, n_layers, first_odd)
         init_gates = [np.eye(4, dtype=complex).reshape(2, 2, 2, 2)
                       for _ in range(ng)]
 
     def cost_grad_fn(gates_tn):
-        gates_list = list(gates_tn)
-        cost, grad = compute_cost_and_grad(
-            target_arrays, gates_list, n_qubits, n_layers,
+        return compute_cost_and_grad(
+            target_mpo, list(gates_tn), n_qubits, n_layers,
             max_bond, first_odd)
-        return cost, grad
 
     gates, cost_history = riemannian_adam(
         cost_grad_fn, init_gates, max_iter=max_iter, lr=lr,
