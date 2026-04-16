@@ -23,7 +23,7 @@ ANSATZ_FRACTIONS = [0.25, 0.5, 0.75, 1.0]  # fraction of target depth
 
 N_CIRCUITS = 3
 MAX_ITER = 100
-LR = 5e-3
+LR = 5e-2
 SEED = 42
 
 OUTPUT = "data/tfi_benchmark.csv"

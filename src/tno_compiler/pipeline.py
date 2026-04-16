@@ -36,8 +36,9 @@ def compile_ensemble(target, ansatz_depth, n_circuits=5,
     compile_errors = []
     compress_error = 0.0
     for i in range(n_circuits):
-        init_qc = random_brickwall(n, ansatz_depth, first_odd, seed=seed + 1000 * i)
-        init_tensors = _qc_to_gate_tensors(init_qc)
+        # Perturbed identity init: small random rotation for diversity
+        init_tensors = _perturbed_identity(n, ansatz_depth, first_odd,
+                                           scale=0.1, seed=seed + 1000 * i)
         compiled, info = compile_circuit(
             target, ansatz_depth, compress_fraction=compress_fraction,
             tol=tol, max_bond=max_bond, max_iter=max_iter, lr=lr,
@@ -96,6 +97,23 @@ def find_min_depth(target, tol, max_depth=20, **kwargs):
     if best is None:
         return max_depth, compile_ensemble(target, max_depth, tol=tol, **kwargs)
     return best
+
+
+def _perturbed_identity(n_qubits, n_layers, first_odd, scale=0.1, seed=0):
+    """Identity gates with small random perturbation for ensemble diversity."""
+    rng = np.random.RandomState(seed)
+    from .brickwall import brickwall_ansatz_gates
+    structure = brickwall_ansatz_gates(n_qubits, n_layers, first_odd)
+    tensors = []
+    for _, pairs in structure:
+        for _ in pairs:
+            # Small anti-Hermitian perturbation → near-identity unitary
+            A = scale * (rng.randn(4, 4) + 1j * rng.randn(4, 4))
+            A = A - A.conj().T  # anti-Hermitian
+            from scipy.linalg import expm
+            U = expm(A)
+            tensors.append(U.reshape(2, 2, 2, 2))
+    return tensors
 
 
 def _qc_to_gate_tensors(qc):
