@@ -38,7 +38,7 @@ def compile_ensemble(target, ansatz_depth, n_circuits=5,
     for i in range(n_circuits):
         # Perturbed identity init: small random rotation for diversity
         init_tensors = _perturbed_identity(n, ansatz_depth, first_odd,
-                                           scale=0.1, seed=seed + 1000 * i)
+                                           scale=0.01, seed=seed + 1000 * i)
         compiled, info = compile_circuit(
             target, ansatz_depth, compress_fraction=compress_fraction,
             tol=tol, max_bond=max_bond, max_iter=max_iter, lr=lr,

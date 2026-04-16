@@ -16,7 +16,7 @@ from tno_compiler.pipeline import compile_ensemble
 J, g, h = 1.0, 0.75, 0.6
 N_CIRCUITS = 5
 MAX_ITER = 300
-LR = 5e-2
+LR = 2e-2
 
 os.makedirs("data", exist_ok=True)
 OUTPUT = "data/deep_compression.csv"
