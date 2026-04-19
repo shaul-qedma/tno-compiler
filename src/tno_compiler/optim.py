@@ -6,6 +6,7 @@
   optimization on the unitary manifold.
 """
 
+import jax.numpy as jnp
 import numpy as np
 
 
@@ -16,20 +17,24 @@ def polar_sweeps(cost_grad_fn, gates_init, max_iter=100, callback=None,
                  max_bond=128, first_odd=True):
     """Alternating-direction polar sweeps (Gibbs & Cincio 2025).
 
-    Each sweep: down (L→0) then up (0→L). Within each layer, multiple
-    left-right passes for convergence. MPO resets at boundaries.
+    Converts to JAX once, runs all iterations in JAX, converts back once.
     """
     from .gradient import polar_sweep
-    gates = list(gates_init)
+
+    # Single conversion to JAX at loop entry
+    target_jax = [jnp.asarray(a) for a in target_arrays]
+    gates = [jnp.asarray(g) for g in gates_init]
     history = []
 
     for t in range(1, max_iter + 1):
-        cost = polar_sweep(target_arrays, gates, n_qubits, n_layers,
+        cost = polar_sweep(target_jax, gates, n_qubits, n_layers,
                            max_bond, first_odd)
         history.append(float(cost))
         if callback:
             callback(t, float(cost))
 
+    # Single conversion back to numpy
+    gates = [np.asarray(g) for g in gates]
     return gates, history
 
 

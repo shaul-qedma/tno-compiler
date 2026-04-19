@@ -23,11 +23,13 @@ def tn_to_mpo(tn, n_sites, max_bond=None, tol=1e-10, norm="operator"):
     Returns (mpo, error_bound) where error_bound ≤ tol.
     """
     if max_bond is not None:
-        # Bounded path: compress directly, then verify error
+        # Bounded path: compress with zipup, then apply DP budget allocation
         mpo = _compress_bounded(tn, n_sites, max_bond, tol, norm)
         spectra = _collect_spectra(mpo)
-        error = _compute_error(spectra, 0.0, max_bond, norm)
-        return mpo, error
+        cutoff = _find_optimal_cutoff(spectra, tol, max_bond, norm)
+        if cutoff > 0:
+            mpo.compress(max_bond=max_bond, cutoff=cutoff, cutoff_mode="abs")
+        return mpo, _compute_error(spectra, cutoff, max_bond, norm)
     else:
         # Exact path: contract fully, then DP budget allocation
         mpo = _contract_to_exact_mpo(tn, n_sites)
@@ -46,7 +48,7 @@ def _compress_bounded(tn, n_sites, max_bond, tol, norm):
     for _ in range(5):
         tn_copy = tn.copy()
         mpo = qtn.tensor_network_1d_compress(
-            tn_copy, max_bond=bond, cutoff=1e-14, method="dm")
+            tn_copy, max_bond=bond, cutoff=1e-14, method="zipup")
         mpo.view_as_(qtn.MatrixProductOperator, cyclic=False, L=n_sites)
         spectra = _collect_spectra(mpo)
         error = _compute_error(spectra, 0.0, bond, norm)
