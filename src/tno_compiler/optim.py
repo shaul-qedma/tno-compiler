@@ -12,22 +12,20 @@ import numpy as np
 # --- Polar decomposition sweeps (Gibbs & Cincio 2025) ---
 
 def polar_sweeps(cost_grad_fn, gates_init, max_iter=100, callback=None,
-                 **kwargs):
-    """Polar decomposition sweeps (Gibbs & Cincio 2025).
+                 target_arrays=None, n_qubits=None, n_layers=None,
+                 max_bond=128, first_odd=True):
+    """Alternating-direction polar sweeps (Gibbs & Cincio 2025).
 
-    Each sweep: recompute all environments, update gates sequentially.
-    O(N²) per sweep but convergence-correct for all circuit types.
+    Each sweep: down (L→0) then up (0→L). Within each layer, multiple
+    left-right passes for convergence. MPO resets at boundaries.
     """
+    from .gradient import polar_sweep
     gates = list(gates_init)
     history = []
 
     for t in range(1, max_iter + 1):
-        for i in range(len(gates)):
-            _, grad = cost_grad_fn(gates)
-            env = grad[i].reshape(4, 4)
-            u, _, vh = np.linalg.svd(env, full_matrices=False)
-            gates[i] = (u @ vh).reshape(2, 2, 2, 2)
-        cost, _ = cost_grad_fn(gates)
+        cost = polar_sweep(target_arrays, gates, n_qubits, n_layers,
+                           max_bond, first_odd)
         history.append(float(cost))
         if callback:
             callback(t, float(cost))

@@ -66,7 +66,15 @@ def _merge_layer_left_to_right(mpo, gates, odd, gate_is_left, max_bond):
 
 
 def _layer_envs(gates, odd, upper, lower):
-    """Environments for each gate in one layer. Returns conjugated envs."""
+    """Environments for each gate in one layer. Returns conjugated envs.
+
+    Single left-to-right pass. Used by compute_cost_and_grad.
+    """
+    return _layer_envs_onepass(gates, odd, upper, lower)
+
+
+def _layer_envs_onepass(gates, odd, upper, lower):
+    """One left-to-right pass collecting environments."""
     n_gates = len(gates)
     if odd:
         i_mpo = len(upper)
@@ -107,81 +115,138 @@ def _layer_envs(gates, odd, upper, lower):
     return np.stack(grads).conj()
 
 
+def _gate_env(g_idx, gates, odd, upper, lower):
+    """Environment for a single gate given current L/R context."""
+    n_gates = len(gates)
+    i_start = 0 if odd else 1
+
+    # Build L from left edge to g_idx
+    if odd:
+        L = np.eye(1, dtype=complex)
+    else:
+        L = np.einsum('abcd,acbe->de', upper[0], lower[0])
+    i_mpo = i_start
+    for g in range(g_idx):
+        L = np.einsum('ai,abcd,defg,cfhk,ihbj,jkel->gl',
+                       L, upper[i_mpo], upper[i_mpo + 1], gates[g],
+                       lower[i_mpo], lower[i_mpo + 1],
+                       optimize=True)
+        i_mpo += 2
+
+    # Build R from right edge to g_idx
+    if odd:
+        R = np.eye(1, dtype=complex)
+    else:
+        R = np.einsum('abcd,ecbd->ae', upper[-1], lower[-1])
+    i_mpo = len(upper) - (1 if not odd else 0)
+    for g in reversed(range(g_idx + 1, n_gates)):
+        i_mpo -= 2
+        R = np.einsum('abcd,defg,cfhk,ihbj,jkel,gl->ai',
+                       upper[i_mpo], upper[i_mpo + 1], gates[g],
+                       lower[i_mpo], lower[i_mpo + 1], R,
+                       optimize=True)
+
+    # Contract environment for gate g_idx
+    i_mpo = i_start + 2 * g_idx
+    A1, A2 = upper[i_mpo], upper[i_mpo + 1]
+    B1, B2 = lower[i_mpo], lower[i_mpo + 1]
+    env = np.einsum('ab,acde,efgh,bick,kjfl,hl->dgij',
+                     L, A1, A2, B1, B2, R, optimize=True)
+    return env.conj()
+
+
+def _optimize_layer_inplace(gates, odd, upper, lower, n_inner=3):
+    """Optimize all gates in a layer via multi-pass polar sweeps.
+
+    Multiple left-right passes within the layer, updating each gate
+    and recomputing its environment from current neighbors.
+    Matches Gibbs-Cincio (2025) within-layer convergence.
+    """
+    n_gates = len(gates)
+    if n_gates <= 1:
+        env = _gate_env(0, gates, odd, upper, lower)
+        u, _, vh = np.linalg.svd(env.reshape(4, 4), full_matrices=False)
+        gates[0] = (u @ vh).reshape(2, 2, 2, 2)
+        return
+
+    for _ in range(n_inner):
+        # Left-to-right pass
+        for g in range(n_gates):
+            env = _gate_env(g, gates, odd, upper, lower)
+            u, _, vh = np.linalg.svd(env.reshape(4, 4), full_matrices=False)
+            gates[g] = (u @ vh).reshape(2, 2, 2, 2)
+        # Right-to-left pass
+        for g in reversed(range(n_gates)):
+            env = _gate_env(g, gates, odd, upper, lower)
+            u, _, vh = np.linalg.svd(env.reshape(4, 4), full_matrices=False)
+            gates[g] = (u @ vh).reshape(2, 2, 2, 2)
+
+
 def polar_sweep(target_arrays, gates, n_qubits, n_layers,
-                max_bond=128, first_odd=True):
+                max_bond=128, first_odd=True, n_inner=3):
     """One full polar decomposition sweep (Gibbs-Cincio 2025).
 
-    Two half-sweeps with MPO resets at the boundaries:
+    Down sweep (L-1 → 0): upper env starts at target (exact), absorbs
+    updated layers incrementally. Lower env pre-built from original gates.
+    At each layer: multi-pass within-layer convergence.
 
-    Down (L-1 → 0): upper env built incrementally from target (exact
-      reset at top) absorbing updated gates going down. Lower env =
-      identity (exact reset at bottom).
+    Up sweep (0 → L-1): lower env starts at identity (exact), absorbs
+    updated layers incrementally. Upper env pre-built from current gates.
+    At each layer: multi-pass within-layer convergence.
 
-    Up (0 → L-1): lower env built incrementally from identity (exact
-      reset at bottom) absorbing updated gates going up. Upper env =
-      target (exact reset at top).
+    MPO resets: upper env resets to target at start of each half-sweep.
+    Lower env resets to identity at start of each half-sweep.
 
-    Each half-sweep starts with one exact environment, preventing
-    truncation error accumulation.
-
-    O(L) per half-sweep. Modifies gates in-place. Returns cost.
+    Modifies gates in-place. Returns cost.
     """
     structure = brickwall_ansatz_gates(n_qubits, n_layers, first_odd)
     L = len(structure)
     gate_layers = _partition(gates, structure)
 
     # --- Down sweep (L-1 → 0) ---
-    # Upper env: target (exact reset), incrementally absorbs updated gates
-    # Lower env: identity (exact, fixed at bottom boundary)
-    top = [a.copy() for a in target_arrays]  # exact
-    bottom = identity_mpo(n_qubits)           # exact
-    sr_top = False
+    # Pre-build lower envs from original gates
+    lower_envs = [identity_mpo(n_qubits)]
+    sr = False
+    for k in range(L - 1):
+        merge = _merge_layer_right_to_left if sr else _merge_layer_left_to_right
+        lower_envs.append(merge(lower_envs[-1], gate_layers[k],
+                                structure[k][0], False, max_bond))
+        sr = not sr
+
+    # Sweep top to bottom with incremental upper env
+    top = [a.copy() for a in target_arrays]  # exact reset
+    sr = False
     for layer in reversed(range(L)):
         odd = structure[layer][0]
-        # Build lower env incrementally from identity up to layer-1
-        # (using original gates -- not yet updated in this sweep)
-        if layer == 0:
-            bot = identity_mpo(n_qubits)  # exact reset
-        else:
-            bot = identity_mpo(n_qubits)
-            sr = False
-            for k in range(layer):
-                merge = _merge_layer_right_to_left if sr else _merge_layer_left_to_right
-                bot = merge(bot, gate_layers[k], structure[k][0], False, max_bond)
-                sr = not sr
-
-        envs = _layer_envs(gate_layers[layer], odd, top, bot)
-        _update_gates_polar(gate_layers[layer], envs)
-
-        # Absorb UPDATED layer into upper env
+        _optimize_layer_inplace(gate_layers[layer], odd, top,
+                                lower_envs[layer], n_inner)
         if layer > 0:
-            merge = _merge_layer_right_to_left if sr_top else _merge_layer_left_to_right
-            top = merge(top, gate_layers[layer], odd, True, max_bond)
-            sr_top = not sr_top
-
-    # --- Up sweep (0 → L-1) ---
-    # Lower env: identity (exact reset), incrementally absorbs updated gates
-    # Upper env: target (exact reset), incrementally absorbs updated gates
-    bottom = identity_mpo(n_qubits)  # exact reset
-    sr_bot = False
-    for layer in range(L):
-        odd = structure[layer][0]
-        # Build upper env from target down to layer+1 (using current gates)
-        top = [a.copy() for a in target_arrays]  # exact reset each time
-        sr = False
-        for k in reversed(range(layer + 1, L)):
             merge = _merge_layer_right_to_left if sr else _merge_layer_left_to_right
-            top = merge(top, gate_layers[k], structure[k][0], True, max_bond)
+            top = merge(top, gate_layers[layer], odd, True, max_bond)
             sr = not sr
 
-        envs = _layer_envs(gate_layers[layer], odd, top, bottom)
-        _update_gates_polar(gate_layers[layer], envs)
+    # --- Up sweep (0 → L-1) ---
+    # Pre-build upper envs from current (post-down-sweep) gates
+    upper_envs = [[a.copy() for a in target_arrays]]
+    sr = False
+    for k in reversed(range(1, L)):
+        merge = _merge_layer_right_to_left if sr else _merge_layer_left_to_right
+        upper_envs.append(merge(upper_envs[-1], gate_layers[k],
+                                structure[k][0], True, max_bond))
+        sr = not sr
+    upper_envs.reverse()
 
-        # Absorb UPDATED layer into lower env
+    # Sweep bottom to top with incremental lower env
+    bottom = identity_mpo(n_qubits)  # exact reset
+    sr = False
+    for layer in range(L):
+        odd = structure[layer][0]
+        _optimize_layer_inplace(gate_layers[layer], odd,
+                                upper_envs[layer], bottom, n_inner)
         if layer < L - 1:
-            merge = _merge_layer_right_to_left if sr_bot else _merge_layer_left_to_right
+            merge = _merge_layer_right_to_left if sr else _merge_layer_left_to_right
             bottom = merge(bottom, gate_layers[layer], odd, False, max_bond)
-            sr_bot = not sr_bot
+            sr = not sr
 
     _flatten_into(gate_layers, gates)
 
