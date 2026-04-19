@@ -1,6 +1,8 @@
-"""Gradient of Tr(V†U) w.r.t. each circuit gate via MPO contraction.
+"""Gate environment computation and polar sweep for MPO-based compilation.
 
-Ported from rqcopt-mpo/tn_brickwall_methods.py.
+Environment computation ported from rqcopt-mpo/tn_brickwall_methods.py.
+Polar sweep implements the Gibbs & Cincio (2025) algorithm: alternating
+direction sweeps with incremental environment updates.
 """
 
 import numpy as np
@@ -64,7 +66,7 @@ def _merge_layer_left_to_right(mpo, gates, odd, gate_is_left, max_bond):
 
 
 def _layer_envs(gates, odd, upper, lower):
-    """Partial derivatives of the overlap w.r.t. each gate in one layer."""
+    """Environments for each gate in one layer. Returns conjugated envs."""
     n_gates = len(gates)
     if odd:
         i_mpo = len(upper)
@@ -105,75 +107,90 @@ def _layer_envs(gates, odd, upper, lower):
     return np.stack(grads).conj()
 
 
-def polar_sweep_inplace(target_arrays, gates, n_qubits, n_layers,
-                        max_bond=128, first_odd=True):
-    """One polar decomposition sweep: update all gates in-place.
+def polar_sweep(target_arrays, gates, n_qubits, n_layers,
+                max_bond=128, first_odd=True):
+    """One polar decomposition sweep (Gibbs-Cincio 2025).
 
-    Same structure as compute_cost_and_grad but updates each gate via
-    polar(env) during the layer sweep, incrementally updating the lower
-    environment MPO. This is the Gibbs-Cincio (2025) algorithm.
+    Down sweep: build upper envs from current gates, sweep layer 0→L-1
+    updating gates and incrementally building lower env from UPDATED gates.
 
-    Returns the cost after the sweep.
+    Cost per sweep: O(L) environment computations (one per layer),
+    each O(n × chi²). Total O(N) where N = total gates.
+
+    Modifies gates in-place. Returns cost after the sweep.
     """
     structure = brickwall_ansatz_gates(n_qubits, n_layers, first_odd)
-    gate_layers, idx = [], 0
-    for _, pairs in structure:
-        gate_layers.append(list(gates[idx:idx + len(pairs)]))
-        idx += len(pairs)
+    n_layers_actual = len(structure)
+    gate_layers = _partition(gates, structure)
 
-    # Build upper environments (from current gates, before any updates)
+    # Build upper envs from current gates (will be stale after updates,
+    # but this is the standard one-directional sweep)
     top = [a.copy() for a in target_arrays]
     upper_envs = [list(top)]
-    sweep_right = False
+    sr = False
     for gl, (odd, _) in zip(reversed(gate_layers[1:]), reversed(structure[1:])):
-        merge = _merge_layer_right_to_left if sweep_right else _merge_layer_left_to_right
+        merge = _merge_layer_right_to_left if sr else _merge_layer_left_to_right
         top = merge(top, gl, odd, True, max_bond)
         upper_envs.append([a.copy() for a in top])
-        sweep_right = not sweep_right
+        sr = not sr
     upper_envs.reverse()
 
-    # Sweep through layers: compute envs, update gates, update lower env
+    # Sweep: optimize each layer, build lower env from UPDATED gates
     bottom = identity_mpo(n_qubits)
-    sweep_right = False
-    gate_idx = 0
-    for layer, (odd, _) in enumerate(structure):
+    sr = False
+    for layer in range(n_layers_actual):
         if layer > 0:
-            merge = _merge_layer_right_to_left if sweep_right else _merge_layer_left_to_right
+            # Absorb the UPDATED previous layer into the lower env
+            merge = _merge_layer_right_to_left if sr else _merge_layer_left_to_right
             bottom = merge(bottom, gate_layers[layer - 1],
                            structure[layer - 1][0], False, max_bond)
-            sweep_right = not sweep_right
+            sr = not sr
 
-        # Compute environments for this layer
+        odd = structure[layer][0]
         envs = _layer_envs(gate_layers[layer], odd,
                            upper_envs[layer], bottom)
+        _update_gates_polar(gate_layers[layer], envs)
 
-        # Update each gate via polar decomposition
-        for i in range(len(gate_layers[layer])):
-            env = envs[i].reshape(4, 4)
-            u, _, vh = np.linalg.svd(env, full_matrices=False)
-            new_gate = (u @ vh).reshape(2, 2, 2, 2)
-            gate_layers[layer][i] = new_gate
-            gates[gate_idx + i] = new_gate
+    _flatten_into(gate_layers, gates)
 
-        gate_idx += len(gate_layers[layer])
-
-    # Cost requires a clean evaluation with updated gates
     cost, _ = compute_cost_and_grad(target_arrays, gates, n_qubits, n_layers,
                                      max_bond, first_odd)
     return cost
+
+
+def _update_gates_polar(layer_gates, envs):
+    """Update each gate in a layer via polar decomposition of its environment."""
+    for i in range(len(layer_gates)):
+        env = envs[i].reshape(4, 4)
+        u, _, vh = np.linalg.svd(env, full_matrices=False)
+        layer_gates[i] = (u @ vh).reshape(2, 2, 2, 2)
+
+
+def _partition(gates, structure):
+    """Partition flat gate list into per-layer mutable lists."""
+    result, idx = [], 0
+    for _, pairs in structure:
+        result.append(list(gates[idx:idx + len(pairs)]))
+        idx += len(pairs)
+    return result
+
+
+def _flatten_into(gate_layers, gates):
+    """Write per-layer gates back to flat list."""
+    idx = 0
+    for layer in gate_layers:
+        for i, g in enumerate(layer):
+            gates[idx + i] = g
+        idx += len(layer)
 
 
 def compute_cost_and_grad(target_arrays, gates, n_qubits, n_layers,
                           max_bond=128, first_odd=True):
     """Frobenius cost 2 - 2·Re(Tr(V†U))/2^n and its gradient."""
     structure = brickwall_ansatz_gates(n_qubits, n_layers, first_odd)
-    # Partition flat gate list into per-layer lists
-    gate_layers, idx = [], 0
-    for _, pairs in structure:
-        gate_layers.append(gates[idx:idx + len(pairs)])
-        idx += len(pairs)
+    gate_layers = _partition(gates, structure)
 
-    # Build upper environments (target + circuit layers merged from above)
+    # Build upper environments
     top = [a.copy() for a in target_arrays]
     upper_envs = [list(top)]
     sweep_right = False

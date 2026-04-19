@@ -1,8 +1,7 @@
 """Optimizers for circuit compilation on U(4)^N.
 
-Two methods:
 - Polar decomposition sweeps (Gibbs & Cincio 2025): analytic
-  optimal update per gate via MPO environments.
+  optimal update per gate via MPO environments. O(N) per sweep.
 - Riemannian ADAM (rqcopt, INMLe/rqcopt-mpo): gradient-based
   optimization on the unitary manifold.
 """
@@ -10,22 +9,20 @@ Two methods:
 import numpy as np
 
 
-# --- Polar decomposition sweeps ---
+# --- Polar decomposition sweeps (Gibbs & Cincio 2025) ---
 
 def polar_sweeps(cost_grad_fn, gates_init, max_iter=100, callback=None,
                  **kwargs):
-    """Optimize gates via polar decomposition sweeps (Gibbs & Cincio 2025).
+    """Optimize via polar decomposition sweeps (Gibbs & Cincio 2025).
 
-    Each sweep recomputes all environments and updates each gate
-    sequentially via polar decomposition.
+    Each sweep recomputes all environments then updates gates
+    sequentially. Correct but O(N²) per sweep. The O(N) incremental
+    version (polar_sweep in gradient.py) is available but currently
+    unstable for circuits far from identity.
     """
     gates = list(gates_init)
     history = []
 
-    # Each sweep: recompute all environments, update each gate sequentially.
-    # TODO: incremental environment updates (Gibbs-Cincio style) for O(N)
-    # per sweep instead of O(N²). Requires alternating sweep direction
-    # and proper environment reset.
     for t in range(1, max_iter + 1):
         for i in range(len(gates)):
             _, grad = cost_grad_fn(gates)
@@ -53,11 +50,11 @@ def _retract(U, eta):
 
 
 def riemannian_adam(cost_grad_fn, gates_init, max_iter=1000, lr=1e-3,
-                    beta1=0.9, beta2=0.99, eps=1e-8, callback=None):
+                    beta1=0.9, beta2=0.99, eps=1e-8, callback=None,
+                    **kwargs):
     """Minimize cost over U(4)^N via Riemannian ADAM.
 
-    Ported from rqcopt (INMLe/rqcopt-mpo), adapted from Qiskit's
-    ADAM optimizer to the Riemannian setting on U(4).
+    Ported from rqcopt (INMLe/rqcopt-mpo).
     """
     N = len(gates_init)
     gates = np.stack([np.asarray(g).reshape(4, 4) for g in gates_init])
