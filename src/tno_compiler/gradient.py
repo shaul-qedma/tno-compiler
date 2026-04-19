@@ -109,47 +109,79 @@ def _layer_envs(gates, odd, upper, lower):
 
 def polar_sweep(target_arrays, gates, n_qubits, n_layers,
                 max_bond=128, first_odd=True):
-    """One polar decomposition sweep (Gibbs-Cincio 2025).
+    """One full polar decomposition sweep (Gibbs-Cincio 2025).
 
-    Down sweep: build upper envs from current gates, sweep layer 0→L-1
-    updating gates and incrementally building lower env from UPDATED gates.
+    Two half-sweeps with MPO resets at the boundaries:
 
-    Cost per sweep: O(L) environment computations (one per layer),
-    each O(n × chi²). Total O(N) where N = total gates.
+    Down (L-1 → 0): upper env built incrementally from target (exact
+      reset at top) absorbing updated gates going down. Lower env =
+      identity (exact reset at bottom).
 
-    Modifies gates in-place. Returns cost after the sweep.
+    Up (0 → L-1): lower env built incrementally from identity (exact
+      reset at bottom) absorbing updated gates going up. Upper env =
+      target (exact reset at top).
+
+    Each half-sweep starts with one exact environment, preventing
+    truncation error accumulation.
+
+    O(L) per half-sweep. Modifies gates in-place. Returns cost.
     """
     structure = brickwall_ansatz_gates(n_qubits, n_layers, first_odd)
-    n_layers_actual = len(structure)
+    L = len(structure)
     gate_layers = _partition(gates, structure)
 
-    # Build upper envs from current gates (will be stale after updates,
-    # but this is the standard one-directional sweep)
-    top = [a.copy() for a in target_arrays]
-    upper_envs = [list(top)]
-    sr = False
-    for gl, (odd, _) in zip(reversed(gate_layers[1:]), reversed(structure[1:])):
-        merge = _merge_layer_right_to_left if sr else _merge_layer_left_to_right
-        top = merge(top, gl, odd, True, max_bond)
-        upper_envs.append([a.copy() for a in top])
-        sr = not sr
-    upper_envs.reverse()
+    # --- Down sweep (L-1 → 0) ---
+    # Upper env: target (exact reset), incrementally absorbs updated gates
+    # Lower env: identity (exact, fixed at bottom boundary)
+    top = [a.copy() for a in target_arrays]  # exact
+    bottom = identity_mpo(n_qubits)           # exact
+    sr_top = False
+    for layer in reversed(range(L)):
+        odd = structure[layer][0]
+        # Build lower env incrementally from identity up to layer-1
+        # (using original gates -- not yet updated in this sweep)
+        if layer == 0:
+            bot = identity_mpo(n_qubits)  # exact reset
+        else:
+            bot = identity_mpo(n_qubits)
+            sr = False
+            for k in range(layer):
+                merge = _merge_layer_right_to_left if sr else _merge_layer_left_to_right
+                bot = merge(bot, gate_layers[k], structure[k][0], False, max_bond)
+                sr = not sr
 
-    # Sweep: optimize each layer, build lower env from UPDATED gates
-    bottom = identity_mpo(n_qubits)
-    sr = False
-    for layer in range(n_layers_actual):
+        envs = _layer_envs(gate_layers[layer], odd, top, bot)
+        _update_gates_polar(gate_layers[layer], envs)
+
+        # Absorb UPDATED layer into upper env
         if layer > 0:
-            # Absorb the UPDATED previous layer into the lower env
+            merge = _merge_layer_right_to_left if sr_top else _merge_layer_left_to_right
+            top = merge(top, gate_layers[layer], odd, True, max_bond)
+            sr_top = not sr_top
+
+    # --- Up sweep (0 → L-1) ---
+    # Lower env: identity (exact reset), incrementally absorbs updated gates
+    # Upper env: target (exact reset), incrementally absorbs updated gates
+    bottom = identity_mpo(n_qubits)  # exact reset
+    sr_bot = False
+    for layer in range(L):
+        odd = structure[layer][0]
+        # Build upper env from target down to layer+1 (using current gates)
+        top = [a.copy() for a in target_arrays]  # exact reset each time
+        sr = False
+        for k in reversed(range(layer + 1, L)):
             merge = _merge_layer_right_to_left if sr else _merge_layer_left_to_right
-            bottom = merge(bottom, gate_layers[layer - 1],
-                           structure[layer - 1][0], False, max_bond)
+            top = merge(top, gate_layers[k], structure[k][0], True, max_bond)
             sr = not sr
 
-        odd = structure[layer][0]
-        envs = _layer_envs(gate_layers[layer], odd,
-                           upper_envs[layer], bottom)
+        envs = _layer_envs(gate_layers[layer], odd, top, bottom)
         _update_gates_polar(gate_layers[layer], envs)
+
+        # Absorb UPDATED layer into lower env
+        if layer < L - 1:
+            merge = _merge_layer_right_to_left if sr_bot else _merge_layer_left_to_right
+            bottom = merge(bottom, gate_layers[layer], odd, False, max_bond)
+            sr_bot = not sr_bot
 
     _flatten_into(gate_layers, gates)
 

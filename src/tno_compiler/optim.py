@@ -1,7 +1,7 @@
 """Optimizers for circuit compilation on U(4)^N.
 
 - Polar decomposition sweeps (Gibbs & Cincio 2025): analytic
-  optimal update per gate via MPO environments. O(N) per sweep.
+  optimal update per gate via MPO environments. O(L) per sweep.
 - Riemannian ADAM (rqcopt, INMLe/rqcopt-mpo): gradient-based
   optimization on the unitary manifold.
 """
@@ -13,12 +13,10 @@ import numpy as np
 
 def polar_sweeps(cost_grad_fn, gates_init, max_iter=100, callback=None,
                  **kwargs):
-    """Optimize via polar decomposition sweeps (Gibbs & Cincio 2025).
+    """Polar decomposition sweeps (Gibbs & Cincio 2025).
 
-    Each sweep recomputes all environments then updates gates
-    sequentially. Correct but O(N²) per sweep. The O(N) incremental
-    version (polar_sweep in gradient.py) is available but currently
-    unstable for circuits far from identity.
+    Each sweep: recompute all environments, update gates sequentially.
+    O(N²) per sweep but convergence-correct for all circuit types.
     """
     gates = list(gates_init)
     history = []
