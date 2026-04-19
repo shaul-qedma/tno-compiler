@@ -115,71 +115,77 @@ def _layer_envs_onepass(gates, odd, upper, lower):
     return np.stack(grads).conj()
 
 
-def _gate_env(g_idx, gates, odd, upper, lower):
-    """Environment for a single gate given current L/R context."""
+def _optimize_layer_inplace(gates, odd, upper, lower, n_inner=3):
+    """Optimize all gates in a layer via multi-pass incremental sweeps.
+
+    Left-to-right: build R envs once, sweep updating L incrementally.
+    Right-to-left: build L envs once, sweep updating R incrementally.
+    Repeat n_inner times. O(N) per pass within the layer.
+    """
     n_gates = len(gates)
     i_start = 0 if odd else 1
 
-    # Build L from left edge to g_idx
-    if odd:
-        L = np.eye(1, dtype=complex)
-    else:
-        L = np.einsum('abcd,acbe->de', upper[0], lower[0])
-    i_mpo = i_start
-    for g in range(g_idx):
-        L = np.einsum('ai,abcd,defg,cfhk,ihbj,jkel->gl',
-                       L, upper[i_mpo], upper[i_mpo + 1], gates[g],
-                       lower[i_mpo], lower[i_mpo + 1],
-                       optimize=True)
-        i_mpo += 2
+    def _init_LR():
+        if odd:
+            return np.eye(1, dtype=complex), np.eye(1, dtype=complex)
+        return (np.einsum('abcd,acbe->de', upper[0], lower[0]),
+                np.einsum('abcd,ecbd->ae', upper[-1], lower[-1]))
 
-    # Build R from right edge to g_idx
-    if odd:
-        R = np.eye(1, dtype=complex)
-    else:
-        R = np.einsum('abcd,ecbd->ae', upper[-1], lower[-1])
-    i_mpo = len(upper) - (1 if not odd else 0)
-    for g in reversed(range(g_idx + 1, n_gates)):
-        i_mpo -= 2
-        R = np.einsum('abcd,defg,cfhk,ihbj,jkel,gl->ai',
-                       upper[i_mpo], upper[i_mpo + 1], gates[g],
-                       lower[i_mpo], lower[i_mpo + 1], R,
-                       optimize=True)
+    def _contract_R(R, g_idx, i_mpo):
+        return np.einsum('abcd,defg,cfhk,ihbj,jkel,gl->ai',
+                          upper[i_mpo], upper[i_mpo + 1], gates[g_idx],
+                          lower[i_mpo], lower[i_mpo + 1], R, optimize=True)
 
-    # Contract environment for gate g_idx
-    i_mpo = i_start + 2 * g_idx
-    A1, A2 = upper[i_mpo], upper[i_mpo + 1]
-    B1, B2 = lower[i_mpo], lower[i_mpo + 1]
-    env = np.einsum('ab,acde,efgh,bick,kjfl,hl->dgij',
-                     L, A1, A2, B1, B2, R, optimize=True)
-    return env.conj()
+    def _contract_L(L, g_idx, i_mpo):
+        return np.einsum('ai,abcd,defg,cfhk,ihbj,jkel->gl',
+                          L, upper[i_mpo], upper[i_mpo + 1], gates[g_idx],
+                          lower[i_mpo], lower[i_mpo + 1], optimize=True)
 
-
-def _optimize_layer_inplace(gates, odd, upper, lower, n_inner=3):
-    """Optimize all gates in a layer via multi-pass polar sweeps.
-
-    Multiple left-right passes within the layer, updating each gate
-    and recomputing its environment from current neighbors.
-    Matches Gibbs-Cincio (2025) within-layer convergence.
-    """
-    n_gates = len(gates)
-    if n_gates <= 1:
-        env = _gate_env(0, gates, odd, upper, lower)
-        u, _, vh = np.linalg.svd(env.reshape(4, 4), full_matrices=False)
-        gates[0] = (u @ vh).reshape(2, 2, 2, 2)
-        return
+    def _env(L, R, i_mpo):
+        A1, A2 = upper[i_mpo], upper[i_mpo + 1]
+        B1, B2 = lower[i_mpo], lower[i_mpo + 1]
+        return np.einsum('ab,acde,efgh,bick,kjfl,hl->dgij',
+                          L, A1, A2, B1, B2, R, optimize=True).conj()
 
     for _ in range(n_inner):
-        # Left-to-right pass
+        # --- Left-to-right pass ---
+        # Build all R envs from current gates
+        L_init, R_init = _init_LR()
+        R_envs = [R_init]
+        i_mpo = len(upper) - (1 if not odd else 0)
+        for g in reversed(range(1, n_gates)):
+            i_mpo -= 2
+            R_envs.append(_contract_R(R_envs[-1], g, i_mpo))
+        R_envs.reverse()
+
+        # Sweep left to right, updating L incrementally
+        L = L_init
         for g in range(n_gates):
-            env = _gate_env(g, gates, odd, upper, lower)
+            i_mpo = i_start + 2 * g
+            env = _env(L, R_envs[g], i_mpo)
             u, _, vh = np.linalg.svd(env.reshape(4, 4), full_matrices=False)
             gates[g] = (u @ vh).reshape(2, 2, 2, 2)
-        # Right-to-left pass
+            if g < n_gates - 1:
+                L = _contract_L(L, g, i_mpo)
+
+        # --- Right-to-left pass ---
+        # Build all L envs from current gates
+        L_init, R_init = _init_LR()
+        L_envs = [L_init]
+        i_mpo = i_start
+        for g in range(n_gates - 1):
+            L_envs.append(_contract_L(L_envs[-1], g, i_mpo))
+            i_mpo += 2
+
+        # Sweep right to left, updating R incrementally
+        R = R_init
         for g in reversed(range(n_gates)):
-            env = _gate_env(g, gates, odd, upper, lower)
+            i_mpo = i_start + 2 * g
+            env = _env(L_envs[g], R, i_mpo)
             u, _, vh = np.linalg.svd(env.reshape(4, 4), full_matrices=False)
             gates[g] = (u @ vh).reshape(2, 2, 2, 2)
+            if g > 0:
+                R = _contract_R(R, g, i_mpo)
 
 
 def polar_sweep(target_arrays, gates, n_qubits, n_layers,
