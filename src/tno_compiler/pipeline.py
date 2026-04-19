@@ -9,6 +9,7 @@ import numpy as np
 from .brickwall import random_brickwall, circuit_to_mpo
 from .compiler import compile_circuit
 from .ensemble import ensemble_qp
+from .mpo_ops import mpo_to_arrays, mpo_overlap
 
 
 def compile_ensemble(target, ansatz_depth, n_circuits=5,
@@ -46,22 +47,24 @@ def compile_ensemble(target, ansatz_depth, n_circuits=5,
         compile_errors.append(info['compile_error'])
         compress_error = info['compress_error']
 
-    # Gram matrix and target overlaps via MPO dense (big-endian, matches optimizer)
-    V = np.array(circuit_to_mpo(target, tol=0.0)[0].to_dense())
-    Us = [np.array(circuit_to_mpo(c, tol=0.0)[0].to_dense()) for c in circuits]
-    M = len(Us)
+    # Gram matrix and target overlaps via MPO transfer-matrix contraction
+    V_arrays = mpo_to_arrays(circuit_to_mpo(target, max_bond=max_bond, tol=0.0)[0])
+    U_arrays = [mpo_to_arrays(circuit_to_mpo(c, max_bond=max_bond, tol=0.0)[0])
+                for c in circuits]
+    M = len(U_arrays)
     gram = np.zeros((M, M))
     overlaps = np.zeros(M)
     for i in range(M):
-        overlaps[i] = np.trace(Us[i].conj().T @ V).real
-        for j in range(M):
-            gram[i, j] = np.trace(Us[i].conj().T @ Us[j]).real
+        overlaps[i] = mpo_overlap(U_arrays[i], V_arrays).real
+        for j in range(i, M):
+            gram[i, j] = mpo_overlap(U_arrays[i], U_arrays[j]).real
+            gram[j, i] = gram[i, j]
 
     # Solve QP
     weights, qp_val = ensemble_qp(gram, overlaps)
 
     # Certification
-    d = 2 ** n
+    d = 2.0 ** n
     ensemble_frob = np.sqrt(max(qp_val + d, 0))
     individual_frobs = [np.sqrt(max(2 * d - 2 * overlaps[i], 0)) for i in range(M)]
     R = max(individual_frobs[i] for i in range(M) if weights[i] > 1e-10)

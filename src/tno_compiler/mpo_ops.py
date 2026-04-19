@@ -77,6 +77,19 @@ def split_merged_tensor(T, canonical='left', max_bond=128):
     return T1, T2
 
 
+def mpo_overlap(A, B):
+    """Compute Tr(A†B) via transfer matrix contraction.
+
+    A, B: lists of (bond_l, k, b, bond_r) numpy arrays.
+    Returns the complex overlap (not normalized by 2^n).
+    Cost: O(n * bond_a^2 * bond_b^2).
+    """
+    T = np.ones((1, 1), dtype=complex)
+    for a, b in zip(A, B):
+        T = np.einsum('ij,ikbm,jkbn->mn', T, a.conj(), b, optimize=True)
+    return T[0, 0]
+
+
 def merge_gate_with_mpo_pair(gate, mpo1, mpo2, gate_is_left=True):
     """Merge a (2,2,2,2) gate with two adjacent MPO tensors.
     Returns (bl, k1, b1, k2, b2, br)."""
