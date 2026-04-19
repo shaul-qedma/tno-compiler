@@ -12,14 +12,14 @@ import numpy as np
 from .brickwall import (
     circuit_to_quimb_tn, brickwall_ansatz_gates, gates_to_circuit,
 )
-from .compress import tn_to_mpo, _contract_to_exact_mpo
+from .compress import tn_to_mpo
 from .mpo_ops import mpo_to_arrays
 from .gradient import compute_cost_and_grad
 from .optim import riemannian_adam, polar_sweeps
 
 
-def compile_circuit(target, ansatz_depth, compress_fraction=0.0,
-                    tol=1e-2, max_bond=None, max_iter=500, lr=1e-3,
+def compile_circuit(target, ansatz_depth, tol=1e-2,
+                    max_bond=256, max_iter=500, lr=1e-3,
                     method="polar", first_odd=True,
                     init_gates=None, callback=None):
     """Compile a target QuantumCircuit into a brickwall circuit at ansatz_depth.
@@ -27,10 +27,10 @@ def compile_circuit(target, ansatz_depth, compress_fraction=0.0,
     Args:
         target: qiskit QuantumCircuit defining the target unitary V.
         ansatz_depth: number of brickwall layers in the compiled circuit.
-        compress_fraction: fraction of tol for MPO compression (0 = exact).
-        tol: total Frobenius error budget.
-        max_bond: hard cap on MPO bond dimension.
-        max_iter, lr: optimizer parameters.
+        tol: Frobenius error budget (split between compression and compilation).
+        max_bond: hard cap on MPO bond dimension (default 256, computational ceiling).
+        max_iter, lr: optimizer parameters (lr only used for method="adam").
+        method: "polar" (default, Gibbs-Cincio) or "adam" (Riemannian ADAM).
         first_odd: brickwall ansatz starts with odd layer.
         init_gates: optional list of (2,2,2,2) initial gate tensors.
         callback: optional callable(step, cost).
@@ -42,15 +42,11 @@ def compile_circuit(target, ansatz_depth, compress_fraction=0.0,
     n_qubits = target.num_qubits
     ansatz = brickwall_ansatz_gates(n_qubits, ansatz_depth, first_odd)
 
-    # Build target MPO
+    # Build target MPO (allocate 10% of tol to compression)
     tn = circuit_to_quimb_tn(target)
-    if compress_fraction > 0:
-        mpo, compress_error = tn_to_mpo(
-            tn, n_qubits, max_bond=max_bond,
-            tol=tol * compress_fraction, norm="frobenius")
-    else:
-        mpo = _contract_to_exact_mpo(tn, n_qubits)
-        compress_error = 0.0
+    mpo, compress_error = tn_to_mpo(
+        tn, n_qubits, max_bond=max_bond,
+        tol=tol * 0.1, norm="frobenius")
 
     # Adjoint for rqcopt convention
     reindex_map = {f"k{i}": f"b{i}" for i in range(n_qubits)}

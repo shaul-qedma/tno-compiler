@@ -12,7 +12,7 @@ from .ensemble import ensemble_qp
 
 
 def compile_ensemble(target, ansatz_depth, n_circuits=5,
-                     tol=1e-2, compress_fraction=0.0, max_bond=None,
+                     tol=1e-2, max_bond=256,
                      max_iter=200, lr=2e-2, first_odd=True, seed=0):
     """Compile an ensemble of brickwall circuits approximating a target.
 
@@ -20,7 +20,7 @@ def compile_ensemble(target, ansatz_depth, n_circuits=5,
         target: qiskit QuantumCircuit.
         ansatz_depth: depth of each compiled circuit.
         n_circuits: number of circuits in the ensemble.
-        tol, compress_fraction, max_bond: passed to compile_circuit.
+        tol, max_bond: passed to compile_circuit.
         max_iter, lr: optimizer parameters.
         seed: base seed for random initialization.
 
@@ -38,7 +38,7 @@ def compile_ensemble(target, ansatz_depth, n_circuits=5,
         init_qc = random_brickwall(n, ansatz_depth, first_odd, seed=seed + 1000 * i)
         init_tensors = _qc_to_gate_tensors(init_qc)
         compiled, info = compile_circuit(
-            target, ansatz_depth, compress_fraction=compress_fraction,
+            target, ansatz_depth,
             tol=tol, max_bond=max_bond, max_iter=max_iter, lr=lr,
             first_odd=first_odd, init_gates=init_tensors, callback=None)
         circuits.append(compiled)

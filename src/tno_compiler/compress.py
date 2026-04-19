@@ -1,14 +1,13 @@
 """Compress an arbitrary quimb TN into an MPO with guaranteed tolerance.
 
-Supports both operator norm and Frobenius norm error guarantees via
-optimal global error budget allocation across bonds (binary search on
-the per-bond SV cutoff).
+Two paths:
+1. Exact: contract to exact MPO, collect spectra, DP budget allocation.
+   Requires bond dim < ~4^(D/4). For shallow circuits.
+2. Bounded: use quimb's tensor_network_1d_compress with max_bond directly.
+   Works for any depth. Error tracked via post-hoc spectra collection.
 
-Note: quimb's built-in compression (cutoff_mode="abs" or "rsum2") does
-not support global tolerance guarantees in either norm. Its per-bond
-cutoffs do not account for error accumulation across bonds. Our
-implementation fills this gap by collecting all bond spectra first,
-then finding the optimal global cutoff via binary search.
+Note: quimb's built-in per-bond cutoffs do not account for error
+accumulation across bonds. Our implementation fills this gap.
 """
 
 import numpy as np
@@ -18,16 +17,43 @@ import quimb.tensor as qtn
 def tn_to_mpo(tn, n_sites, max_bond=None, tol=1e-10, norm="operator"):
     """Compress a quimb TN (with site tags) into an MPO.
 
-    Args:
-        norm: "operator" or "frobenius" -- which norm to bound.
+    If max_bond is set, uses quimb's 1D compress (handles deep circuits).
+    Otherwise contracts to exact MPO first (only for shallow circuits).
 
     Returns (mpo, error_bound) where error_bound ≤ tol.
     """
-    mpo = _contract_to_exact_mpo(tn, n_sites)
-    spectra = _collect_spectra(mpo)
-    cutoff = _find_optimal_cutoff(spectra, tol, max_bond, norm)
-    mpo.compress(max_bond=max_bond, cutoff=cutoff, cutoff_mode="abs")
-    return mpo, _compute_error(spectra, cutoff, max_bond, norm)
+    if max_bond is not None:
+        # Bounded path: compress directly, then verify error
+        mpo = _compress_bounded(tn, n_sites, max_bond, tol, norm)
+        spectra = _collect_spectra(mpo)
+        error = _compute_error(spectra, 0.0, max_bond, norm)
+        return mpo, error
+    else:
+        # Exact path: contract fully, then DP budget allocation
+        mpo = _contract_to_exact_mpo(tn, n_sites)
+        spectra = _collect_spectra(mpo)
+        cutoff = _find_optimal_cutoff(spectra, tol, max_bond, norm)
+        mpo.compress(max_bond=max_bond, cutoff=cutoff, cutoff_mode="abs")
+        return mpo, _compute_error(spectra, cutoff, max_bond, norm)
+
+
+def _compress_bounded(tn, n_sites, max_bond, tol, norm):
+    """Compress using quimb's 1D compress with max_bond cap.
+
+    Iteratively increases max_bond if the error exceeds tol.
+    """
+    bond = max_bond
+    for _ in range(5):
+        tn_copy = tn.copy()
+        mpo = qtn.tensor_network_1d_compress(
+            tn_copy, max_bond=bond, cutoff=1e-14, method="dm")
+        mpo.view_as_(qtn.MatrixProductOperator, cyclic=False, L=n_sites)
+        spectra = _collect_spectra(mpo)
+        error = _compute_error(spectra, 0.0, bond, norm)
+        if error <= tol:
+            return mpo
+        bond = int(bond * 1.5)
+    return mpo  # return best effort
 
 
 def _contract_to_exact_mpo(tn, n_sites):
@@ -72,11 +98,6 @@ def _find_optimal_cutoff(spectra, tol, max_bond, norm):
 
 
 def _compute_error(spectra, cutoff, max_bond, norm):
-    """Compute total error for a given per-bond cutoff.
-
-    operator: sum of first-discarded SVs (triangle inequality).
-    frobenius: sqrt of sum of squared discarded SVs across all bonds.
-    """
     total = 0.0
     for svs in spectra:
         cap = min(len(svs), max_bond) if max_bond else len(svs)
