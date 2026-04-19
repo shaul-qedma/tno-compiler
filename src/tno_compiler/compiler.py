@@ -48,6 +48,9 @@ def compile_circuit(target, ansatz_depth, tol=1e-2,
         tn, n_qubits, max_bond=max_bond,
         tol=tol * 0.1, norm="frobenius")
 
+    # Use actual bond dimension from compression, not the ceiling
+    actual_bond = max(mpo.bond_sizes())
+
     # Adjoint for rqcopt convention
     reindex_map = {f"k{i}": f"b{i}" for i in range(n_qubits)}
     reindex_map.update({f"b{i}": f"k{i}" for i in range(n_qubits)})
@@ -58,26 +61,18 @@ def compile_circuit(target, ansatz_depth, tol=1e-2,
         ng = sum(len(pairs) for _, pairs in ansatz)
         init_gates = [np.eye(4, dtype=complex).reshape(2, 2, 2, 2)] * ng
 
-    # Partition and optimize
-    def _partition(gates):
-        result, idx = [], 0
-        for _, pairs in ansatz:
-            result.append(gates[idx:idx + len(pairs)])
-            idx += len(pairs)
-        return result
-
     is_odd = [odd for odd, _ in ansatz]
 
     def cost_grad_fn(gates):
         return compute_cost_and_grad(
             target_arrays, gates, n_qubits, ansatz_depth,
-            max_bond=max_bond or 128, first_odd=first_odd)
+            max_bond=actual_bond, first_odd=first_odd)
 
     if method == "polar":
         opt_gates, cost_history = polar_sweeps(
             cost_grad_fn, init_gates, max_iter=max_iter, callback=callback,
             target_arrays=target_arrays, n_qubits=n_qubits,
-            n_layers=ansatz_depth, max_bond=max_bond or 128,
+            n_layers=ansatz_depth, max_bond=actual_bond,
             first_odd=first_odd)
     elif method == "adam":
         opt_gates, cost_history = riemannian_adam(

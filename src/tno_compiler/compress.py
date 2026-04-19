@@ -40,12 +40,13 @@ def tn_to_mpo(tn, n_sites, max_bond=None, tol=1e-10, norm="operator"):
 
 
 def _compress_bounded(tn, n_sites, max_bond, tol, norm):
-    """Compress using quimb's 1D compress with max_bond cap.
+    """Compress using quimb's 1D compress, starting small and growing.
 
-    Iteratively increases max_bond if the error exceeds tol.
+    zipup cost is O(n * bond^3), so start at a small bond dimension
+    and double until the error is within tolerance or max_bond is reached.
     """
-    bond = max_bond
-    for _ in range(5):
+    bond = 16
+    while bond <= max_bond:
         tn_copy = tn.copy()
         mpo = qtn.tensor_network_1d_compress(
             tn_copy, max_bond=bond, cutoff=1e-14, method="zipup")
@@ -54,8 +55,8 @@ def _compress_bounded(tn, n_sites, max_bond, tol, norm):
         error = _compute_error(spectra, 0.0, bond, norm)
         if error <= tol:
             return mpo
-        bond = int(bond * 1.5)
-    return mpo  # return best effort
+        bond = min(bond * 2, max_bond) if bond < max_bond else max_bond + 1
+    return mpo
 
 
 def _contract_to_exact_mpo(tn, n_sites):
