@@ -21,7 +21,8 @@ from .optim import riemannian_adam, polar_sweeps
 def compile_circuit(target, ansatz_depth, tol=1e-2,
                     max_bond=256, max_iter=500, lr=1e-3,
                     method="polar", first_odd=True,
-                    init_gates=None, callback=None):
+                    init_gates=None, callback=None,
+                    drop_rate=0.0, seed=0):
     """Compile a target QuantumCircuit into a brickwall circuit at ansatz_depth.
 
     Args:
@@ -34,6 +35,11 @@ def compile_circuit(target, ansatz_depth, tol=1e-2,
         first_odd: brickwall ansatz starts with odd layer.
         init_gates: optional list of (2,2,2,2) initial gate tensors.
         callback: optional callable(step, cost).
+        drop_rate: per-gate probability of skipping the polar update
+            on each visit (dropout-style stochasticity to break basin
+            commit). 0 disables. Polar method only.
+        seed: master RNG seed. Drives dropout. Init-gate randomness is
+            the caller's responsibility (via `init_gates`).
 
     Returns:
         compiled: QuantumCircuit (the compiled brickwall circuit).
@@ -73,7 +79,8 @@ def compile_circuit(target, ansatz_depth, tol=1e-2,
             cost_grad_fn, init_gates, max_iter=max_iter, callback=callback,
             target_arrays=target_arrays, n_qubits=n_qubits,
             n_layers=ansatz_depth, max_bond=actual_bond,
-            first_odd=first_odd)
+            first_odd=first_odd,
+            drop_rate=drop_rate, seed=seed)
     elif method == "adam":
         opt_gates, cost_history = riemannian_adam(
             cost_grad_fn, init_gates, max_iter=max_iter, lr=lr, callback=callback)

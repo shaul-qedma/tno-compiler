@@ -114,14 +114,20 @@ def _layer_envs_onepass(gates, odd, upper, lower):
     return jnp.stack(grads)
 
 
-def _optimize_layer_inplace(gates, odd, upper, lower, n_inner=3):
+def _optimize_layer_inplace(gates, odd, upper, lower, n_inner=3,
+                             drop_rate=0.0, rng=None):
     """Optimize all gates in a layer via multi-pass incremental sweeps.
 
     Uses fused env_and_polar_update: one JIT call per gate instead of
     separate environment contraction + SVD.
+
+    `drop_rate` (0 to disable): per-gate probability of skipping the
+    polar update on each visit, to break basin-commit via the coordinated
+    equilibrium Gauss-Seidel converges to.
     """
     n_gates = len(gates)
     i_start = 0 if odd else 1
+    drop = drop_rate > 0.0
 
     def _init_LR():
         if odd:
@@ -143,9 +149,10 @@ def _optimize_layer_inplace(gates, odd, upper, lower, n_inner=3):
         L = L_init
         for g in range(n_gates):
             i_mpo = i_start + 2 * g
-            gates[g] = env_and_polar_update(
-                L, upper[i_mpo], upper[i_mpo + 1],
-                lower[i_mpo], lower[i_mpo + 1], R_envs[g])
+            if not (drop and rng.random() < drop_rate):
+                gates[g] = env_and_polar_update(
+                    L, upper[i_mpo], upper[i_mpo + 1],
+                    lower[i_mpo], lower[i_mpo + 1], R_envs[g])
             if g < n_gates - 1:
                 L = contract_L(L, upper[i_mpo], upper[i_mpo + 1],
                                gates[g], lower[i_mpo], lower[i_mpo + 1])
@@ -163,9 +170,10 @@ def _optimize_layer_inplace(gates, odd, upper, lower, n_inner=3):
         R = R_init
         for g in reversed(range(n_gates)):
             i_mpo = i_start + 2 * g
-            gates[g] = env_and_polar_update(
-                L_envs[g], upper[i_mpo], upper[i_mpo + 1],
-                lower[i_mpo], lower[i_mpo + 1], R)
+            if not (drop and rng.random() < drop_rate):
+                gates[g] = env_and_polar_update(
+                    L_envs[g], upper[i_mpo], upper[i_mpo + 1],
+                    lower[i_mpo], lower[i_mpo + 1], R)
             if g > 0:
                 R = contract_R(upper[i_mpo], upper[i_mpo + 1],
                                gates[g], lower[i_mpo],
@@ -173,11 +181,13 @@ def _optimize_layer_inplace(gates, odd, upper, lower, n_inner=3):
 
 
 def polar_sweep(target_arrays, gates, n_qubits, n_layers,
-                max_bond=128, first_odd=True, n_inner=3):
+                max_bond=128, first_odd=True, n_inner=3,
+                drop_rate=0.0, rng=None):
     """One full polar decomposition sweep (Gibbs-Cincio 2025).
 
     Expects JAX arrays. Caller (polar_sweeps) handles conversion.
     Modifies gates in-place. Returns cost.
+    `drop_rate`, `rng`: passed through to `_optimize_layer_inplace`.
     """
     structure = brickwall_ansatz_gates(n_qubits, n_layers, first_odd)
     L = len(structure)
@@ -197,7 +207,8 @@ def polar_sweep(target_arrays, gates, n_qubits, n_layers,
     for layer in reversed(range(L)):
         odd = structure[layer][0]
         _optimize_layer_inplace(gate_layers[layer], odd, top,
-                                lower_envs[layer], n_inner)
+                                lower_envs[layer], n_inner,
+                                drop_rate=drop_rate, rng=rng)
         if layer > 0:
             merge = _merge_layer_right_to_left if sr else _merge_layer_left_to_right
             top = merge(top, gate_layers[layer], odd, True, max_bond)
@@ -218,7 +229,8 @@ def polar_sweep(target_arrays, gates, n_qubits, n_layers,
     for layer in range(L):
         odd = structure[layer][0]
         _optimize_layer_inplace(gate_layers[layer], odd,
-                                upper_envs[layer], bottom, n_inner)
+                                upper_envs[layer], bottom, n_inner,
+                                drop_rate=drop_rate, rng=rng)
         if layer < L - 1:
             merge = _merge_layer_right_to_left if sr else _merge_layer_left_to_right
             bottom = merge(bottom, gate_layers[layer], odd, False, max_bond)

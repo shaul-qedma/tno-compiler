@@ -6,6 +6,7 @@ certified diamond distance bound.
 """
 
 import numpy as np
+from tqdm import tqdm
 from .brickwall import random_brickwall, circuit_to_mpo
 from .compiler import compile_circuit
 from .ensemble import ensemble_qp
@@ -14,7 +15,8 @@ from .mpo_ops import mpo_to_arrays, mpo_overlap
 
 def compile_ensemble(target, ansatz_depth, n_circuits=5,
                      tol=1e-2, max_bond=256,
-                     max_iter=200, lr=2e-2, first_odd=True, seed=0):
+                     max_iter=200, lr=2e-2, first_odd=True, seed=0,
+                     drop_rate=0.0):
     """Compile an ensemble of brickwall circuits approximating a target.
 
     Args:
@@ -24,44 +26,56 @@ def compile_ensemble(target, ansatz_depth, n_circuits=5,
         tol, max_bond: passed to compile_circuit.
         max_iter, lr: optimizer parameters.
         seed: base seed for random initialization.
+        drop_rate: per-gate polar-sweep dropout probability passed to
+            compile_circuit. Each candidate uses a distinct drop_seed
+            derived from `seed` to decorrelate ensemble members.
 
     Returns dict with weights, circuits, diamond_bound, etc.
     """
     n = target.num_qubits
+    print(f"[ensemble] n={n}, ansatz_depth={ansatz_depth}, "
+          f"{n_circuits} circuits, {max_iter} iters each", flush=True)
 
     # Compile M circuits from different random initializations
     circuits = []
     gate_tensors_list = []
     compile_errors = []
     compress_error = 0.0
-    for i in range(n_circuits):
-        # Random Haar init for maximum diversity across ensemble members
+    for i in tqdm(range(n_circuits), desc="Compiling circuits"):
         init_qc = random_brickwall(n, ansatz_depth, first_odd, seed=seed + 1000 * i)
         init_tensors = _qc_to_gate_tensors(init_qc)
         compiled, info = compile_circuit(
             target, ansatz_depth,
             tol=tol, max_bond=max_bond, max_iter=max_iter, lr=lr,
-            first_odd=first_odd, init_gates=init_tensors, callback=None)
+            first_odd=first_odd, init_gates=init_tensors, callback=None,
+            drop_rate=drop_rate, seed=seed + 1000 * i)
         circuits.append(compiled)
         gate_tensors_list.append(info['gate_tensors'])
         compile_errors.append(info['compile_error'])
         compress_error = info['compress_error']
+        print(f"  circuit {i}: cost={info['compile_error']:.2e}", flush=True)
 
-    # Gram matrix and target overlaps via MPO transfer-matrix contraction
-    V_arrays = mpo_to_arrays(circuit_to_mpo(target, max_bond=max_bond, tol=0.0)[0])
-    U_arrays = [mpo_to_arrays(circuit_to_mpo(c, max_bond=max_bond, tol=0.0)[0])
-                for c in circuits]
-    M = len(U_arrays)
+    # Target overlaps from compile costs (already computed, exact)
+    print(f"[ensemble] Computing overlaps...", flush=True)
+    d = 2.0 ** n
+    M = len(circuits)
+    overlaps = np.array([(1.0 - compile_errors[i] / 2.0) * d for i in range(M)])
+
+    # Pairwise overlaps via MPO contraction
+    # Compiled circuits approximate a low-bond target, so modest bond suffices
+    overlap_bond = max(32, max_bond)
+    U_arrays = [mpo_to_arrays(circuit_to_mpo(c, max_bond=overlap_bond, tol=tol)[0])
+                for c in tqdm(circuits, desc="Converting to MPO")]
     gram = np.zeros((M, M))
-    overlaps = np.zeros(M)
     for i in range(M):
-        overlaps[i] = mpo_overlap(U_arrays[i], V_arrays).real
         for j in range(i, M):
             gram[i, j] = mpo_overlap(U_arrays[i], U_arrays[j]).real
             gram[j, i] = gram[i, j]
+    print(f"[ensemble] Overlaps done. Solving QP...", flush=True)
 
     # Solve QP
     weights, qp_val = ensemble_qp(gram, overlaps)
+    print(f"[ensemble] QP solved. Certifying...", flush=True)
 
     # Certification
     d = 2.0 ** n

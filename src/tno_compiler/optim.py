@@ -14,26 +14,31 @@ import numpy as np
 
 def polar_sweeps(cost_grad_fn, gates_init, max_iter=100, callback=None,
                  target_arrays=None, n_qubits=None, n_layers=None,
-                 max_bond=128, first_odd=True):
+                 max_bond=128, first_odd=True,
+                 drop_rate=0.0, seed=0):
     """Alternating-direction polar sweeps (Gibbs & Cincio 2025).
 
     Converts to JAX once, runs all iterations in JAX, converts back once.
+
+    `drop_rate` (0 to disable): per-gate probability of skipping the
+    polar update on each visit. `seed` drives the dropout RNG for
+    reproducibility.
     """
     from .gradient import polar_sweep
 
-    # Single conversion to JAX at loop entry
     target_jax = [jnp.asarray(a) for a in target_arrays]
     gates = [jnp.asarray(g) for g in gates_init]
+    rng = np.random.default_rng(seed) if drop_rate > 0.0 else None
     history = []
 
     for t in range(1, max_iter + 1):
         cost = polar_sweep(target_jax, gates, n_qubits, n_layers,
-                           max_bond, first_odd)
+                           max_bond, first_odd,
+                           drop_rate=drop_rate, rng=rng)
         history.append(float(cost))
         if callback:
             callback(t, float(cost))
 
-    # Single conversion back to numpy
     gates = [np.asarray(g) for g in gates]
     return gates, history
 
