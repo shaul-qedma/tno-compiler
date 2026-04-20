@@ -17,6 +17,10 @@ from .jax_ops import (
     env_and_polar_update,
     absorb_R_left, absorb_R_right,
     init_L, init_R,
+    # batched variants
+    contract_R_batched, contract_L_batched,
+    env_and_polar_update_batched,
+    init_L_batched, init_R_batched,
 )
 from .brickwall import brickwall_ansatz_gates
 
@@ -178,6 +182,84 @@ def _optimize_layer_inplace(gates, odd, upper, lower, n_inner=3,
                 R = contract_R(upper[i_mpo], upper[i_mpo + 1],
                                gates[g], lower[i_mpo],
                                lower[i_mpo + 1], R)
+
+
+def _optimize_layer_inplace_batched(gates, odd, upper, lower, n_inner=3,
+                                      drop_rate=0.0, rng=None):
+    """Batched version of `_optimize_layer_inplace`.
+
+    Shapes:
+      gates: list of (B, 2, 2, 2, 2) arrays, one per gate in the layer.
+      upper/lower: lists of (B, bond_l, k, b, bond_r) MPO tensors.
+
+    Dropout decisions are independent per batch element: at each update
+    opportunity we flip B coins. Skipped batch elements retain their
+    current gate value; unskipped ones take the polar update. Mixing
+    them via `jnp.where` keeps everything inside XLA.
+    """
+    n_gates = len(gates)
+    i_start = 0 if odd else 1
+    drop = drop_rate > 0.0
+    B = gates[0].shape[0]
+
+    def _init_LR():
+        if odd:
+            eye = jnp.broadcast_to(_EYE1, (B, 1, 1))
+            return eye, eye
+        return (init_L_batched(upper[0], lower[0]),
+                init_R_batched(upper[-1], lower[-1]))
+
+    def _apply_drop(old, new):
+        if not drop:
+            return new
+        mask = jnp.asarray(rng.random(B) >= drop_rate).reshape(B, 1, 1, 1, 1)
+        return jnp.where(mask, new, old)
+
+    for _ in range(n_inner):
+        # --- Left-to-right pass ---
+        L_init, R_init = _init_LR()
+        R_envs = [R_init]
+        i_mpo = len(upper) - (1 if not odd else 0)
+        for g in reversed(range(1, n_gates)):
+            i_mpo -= 2
+            R_envs.append(contract_R_batched(
+                upper[i_mpo], upper[i_mpo + 1], gates[g],
+                lower[i_mpo], lower[i_mpo + 1], R_envs[-1]))
+        R_envs.reverse()
+
+        L = L_init
+        for g in range(n_gates):
+            i_mpo = i_start + 2 * g
+            new_gate = env_and_polar_update_batched(
+                L, upper[i_mpo], upper[i_mpo + 1],
+                lower[i_mpo], lower[i_mpo + 1], R_envs[g])
+            gates[g] = _apply_drop(gates[g], new_gate)
+            if g < n_gates - 1:
+                L = contract_L_batched(
+                    L, upper[i_mpo], upper[i_mpo + 1], gates[g],
+                    lower[i_mpo], lower[i_mpo + 1])
+
+        # --- Right-to-left pass ---
+        L_init, R_init = _init_LR()
+        L_envs = [L_init]
+        i_mpo = i_start
+        for g in range(n_gates - 1):
+            L_envs.append(contract_L_batched(
+                L_envs[-1], upper[i_mpo], upper[i_mpo + 1], gates[g],
+                lower[i_mpo], lower[i_mpo + 1]))
+            i_mpo += 2
+
+        R = R_init
+        for g in reversed(range(n_gates)):
+            i_mpo = i_start + 2 * g
+            new_gate = env_and_polar_update_batched(
+                L_envs[g], upper[i_mpo], upper[i_mpo + 1],
+                lower[i_mpo], lower[i_mpo + 1], R)
+            gates[g] = _apply_drop(gates[g], new_gate)
+            if g > 0:
+                R = contract_R_batched(
+                    upper[i_mpo], upper[i_mpo + 1], gates[g],
+                    lower[i_mpo], lower[i_mpo + 1], R)
 
 
 def polar_sweep(target_arrays, gates, n_qubits, n_layers,
