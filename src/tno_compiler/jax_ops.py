@@ -28,6 +28,13 @@ def identity_mpo(n_sites):
     return [_ID_TENSOR] * n_sites
 
 
+def identity_mpo_batched(n_sites, B):
+    """Identity MPO broadcast to batch size B. Shape per site:
+    (B, 1, 2, 2, 1)."""
+    t = jnp.broadcast_to(_ID_TENSOR, (B,) + _ID_TENSOR.shape)
+    return [t] * n_sites
+
+
 @jax.jit
 def _merge_left(mpo1, mpo2, gate):
     return jnp.einsum('iabc,cdef,begh->iadghf', mpo1, mpo2, gate, optimize=True)

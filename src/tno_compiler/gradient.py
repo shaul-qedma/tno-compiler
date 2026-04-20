@@ -11,7 +11,7 @@ import jax.numpy as jnp
 import numpy as np
 from .jax_ops import (
     _EYE1,
-    identity_mpo, canonicalize_tensor,
+    identity_mpo, identity_mpo_batched, canonicalize_tensor,
     merge_gate_with_mpo_pair, split_merged_tensor,
     contract_R, contract_L, compute_gate_env,
     env_and_polar_update,
@@ -21,6 +21,10 @@ from .jax_ops import (
     contract_R_batched, contract_L_batched,
     env_and_polar_update_batched,
     init_L_batched, init_R_batched,
+    absorb_R_left_batched, absorb_R_right_batched,
+    merge_gate_with_mpo_pair_batched,
+    split_merged_tensor_batched,
+    canonicalize_tensor_batched,
 )
 from .brickwall import brickwall_ansatz_gates
 
@@ -184,6 +188,123 @@ def _optimize_layer_inplace(gates, odd, upper, lower, n_inner=3,
                                lower[i_mpo + 1], R)
 
 
+def _merge_layer_right_to_left_batched(mpo, gates, odd, gate_is_left, max_bond):
+    n = len(mpo)
+    if not odd:
+        Q, R = canonicalize_tensor_batched(mpo[-1], left=False)
+        result = [Q]
+        i = n - 2
+    else:
+        result = []
+        i = n - 1
+    while i - 1 >= 0:
+        m1, m2 = mpo[i - 1], mpo[i]
+        m2 = m2 if i == n - 1 else absorb_R_right_batched(m2, R)
+        merged = merge_gate_with_mpo_pair_batched(
+            gates[int((i - 1) / 2)], m1, m2, gate_is_left)
+        T1, T2 = split_merged_tensor_batched(merged, 'right', max_bond)
+        if i - 1 == 0:
+            result += [T2, T1]
+        else:
+            Q, R = canonicalize_tensor_batched(T1, left=False)
+            result += [T2, Q]
+        i -= 2
+    if i == 0:
+        result.append(absorb_R_right_batched(mpo[0], R))
+    result.reverse()
+    return result
+
+
+def _merge_layer_left_to_right_batched(mpo, gates, odd, gate_is_left, max_bond):
+    n = len(mpo)
+    if not odd:
+        Q, R = canonicalize_tensor_batched(mpo[0], left=True)
+        result = [Q]
+        i = 1
+    else:
+        result = []
+        i = 0
+    while i + 1 < n:
+        m1 = mpo[i] if i == 0 else absorb_R_left_batched(R, mpo[i])
+        merged = merge_gate_with_mpo_pair_batched(
+            gates[int(i / 2)], m1, mpo[i + 1], gate_is_left)
+        T1, T2 = split_merged_tensor_batched(merged, 'left', max_bond)
+        if i + 1 == n - 1:
+            result += [T1, T2]
+        else:
+            Q, R = canonicalize_tensor_batched(T2, left=True)
+            result += [T1, Q]
+        i += 2
+    if i == n - 1:
+        result.append(absorb_R_left_batched(R, mpo[-1]))
+    return result
+
+
+def _layer_envs_onepass_batched(gates, odd, upper, lower):
+    """Batched version of `_layer_envs_onepass`. Returns a list of
+    batched environment tensors (one per gate position)."""
+    from .jax_ops import compute_gate_env_batched
+    n_gates = len(gates)
+    B = gates[0].shape[0]
+    eye = jnp.broadcast_to(_EYE1, (B, 1, 1))
+    if odd:
+        i_mpo = len(upper)
+        R, L = eye, eye
+    else:
+        i_mpo = len(upper) - 1
+        R = init_R_batched(upper[-1], lower[-1])
+        L = init_L_batched(upper[0], lower[0])
+
+    R_envs = [R]
+    for gate in reversed(gates[1:]):
+        i_mpo -= 2
+        R = contract_R_batched(upper[i_mpo], upper[i_mpo + 1], gate,
+                                lower[i_mpo], lower[i_mpo + 1], R)
+        R_envs.append(R)
+    R_envs.reverse()
+
+    grads = []
+    i_mpo = 0 if odd else 1
+    i_env = i_mpo
+    for g in range(n_gates):
+        A1, A2 = upper[i_mpo], upper[i_mpo + 1]
+        B1, B2 = lower[i_mpo], lower[i_mpo + 1]
+        i_mpo += 2
+        if g > 0:
+            R = R_envs[g]
+            L = contract_L_batched(L, upper[i_env], upper[i_env + 1],
+                                    gates[g - 1],
+                                    lower[i_env], lower[i_env + 1])
+            i_env += 2
+        grads.append(compute_gate_env_batched(L, A1, A2, B1, B2, R))
+    return grads
+
+
+def _compute_cost_batched(target_arrays_batched, gates, n_qubits, n_layers,
+                           max_bond, first_odd):
+    """Batched cost: returns a (B,) array."""
+    structure = brickwall_ansatz_gates(n_qubits, n_layers, first_odd)
+    gate_layers = _partition(gates, structure)
+    B = gates[0].shape[0]
+
+    top = list(target_arrays_batched)
+    sweep_right = False
+    for gl, (odd, _) in zip(reversed(gate_layers[1:]), reversed(structure[1:])):
+        merge = (_merge_layer_right_to_left_batched if sweep_right
+                 else _merge_layer_left_to_right_batched)
+        top = merge(top, gl, odd, True, max_bond)
+        sweep_right = not sweep_right
+
+    bottom = identity_mpo_batched(n_qubits, B)
+    odd = structure[0][0]
+    envs = _layer_envs_onepass_batched(gate_layers[0], odd, top, bottom)
+    # per-batch overlap: contract over gate tensor dims (last 4), keep batch.
+    overlap = jnp.einsum('Nabcd,Nabcd->N',
+                         envs[0].conj(), gate_layers[0][0])
+    d = 2.0 ** n_qubits
+    return 2.0 - 2.0 * overlap.real / d
+
+
 def _optimize_layer_inplace_batched(gates, odd, upper, lower, n_inner=3,
                                       drop_rate=0.0, rng=None):
     """Batched version of `_optimize_layer_inplace`.
@@ -324,6 +445,76 @@ def polar_sweep(target_arrays, gates, n_qubits, n_layers,
     cost = _compute_cost(target_arrays, gates, n_qubits, n_layers,
                          max_bond, first_odd)
     return cost
+
+
+def polar_sweep_batched(target_arrays_batched, gates, n_qubits, n_layers,
+                         max_bond=128, first_odd=True, n_inner=3,
+                         drop_rate=0.0, rng=None):
+    """Batched polar sweep.
+
+    target_arrays_batched: list of (B, bond_l, k, b, bond_r) JAX arrays
+        — target MPO broadcast to the ensemble batch dim B. All batch
+        elements share the target, but carrying the batch dim through
+        the layer-merge operations is what lets envelopes accumulate
+        batch-dependent gate contributions cleanly.
+    gates: list of (B, 2, 2, 2, 2) JAX arrays. Modified in place.
+    Returns (B,) cost vector.
+    """
+    structure = brickwall_ansatz_gates(n_qubits, n_layers, first_odd)
+    L = len(structure)
+    gate_layers = _partition(gates, structure)
+    B = gates[0].shape[0]
+
+    # --- Down sweep (L-1 → 0) ---
+    lower_envs = [identity_mpo_batched(n_qubits, B)]
+    sr = False
+    for k in range(L - 1):
+        merge = (_merge_layer_right_to_left_batched if sr
+                 else _merge_layer_left_to_right_batched)
+        lower_envs.append(merge(lower_envs[-1], gate_layers[k],
+                                 structure[k][0], False, max_bond))
+        sr = not sr
+
+    top = list(target_arrays_batched)
+    sr = False
+    for layer in reversed(range(L)):
+        odd = structure[layer][0]
+        _optimize_layer_inplace_batched(
+            gate_layers[layer], odd, top, lower_envs[layer], n_inner,
+            drop_rate=drop_rate, rng=rng)
+        if layer > 0:
+            merge = (_merge_layer_right_to_left_batched if sr
+                     else _merge_layer_left_to_right_batched)
+            top = merge(top, gate_layers[layer], odd, True, max_bond)
+            sr = not sr
+
+    # --- Up sweep (0 → L-1) ---
+    upper_envs = [list(target_arrays_batched)]
+    sr = False
+    for k in reversed(range(1, L)):
+        merge = (_merge_layer_right_to_left_batched if sr
+                 else _merge_layer_left_to_right_batched)
+        upper_envs.append(merge(upper_envs[-1], gate_layers[k],
+                                 structure[k][0], True, max_bond))
+        sr = not sr
+    upper_envs.reverse()
+
+    bottom = identity_mpo_batched(n_qubits, B)
+    sr = False
+    for layer in range(L):
+        odd = structure[layer][0]
+        _optimize_layer_inplace_batched(
+            gate_layers[layer], odd, upper_envs[layer], bottom, n_inner,
+            drop_rate=drop_rate, rng=rng)
+        if layer < L - 1:
+            merge = (_merge_layer_right_to_left_batched if sr
+                     else _merge_layer_left_to_right_batched)
+            bottom = merge(bottom, gate_layers[layer], odd, False, max_bond)
+            sr = not sr
+
+    _flatten_into(gate_layers, gates)
+    return _compute_cost_batched(target_arrays_batched, gates, n_qubits,
+                                  n_layers, max_bond, first_odd)
 
 
 def _compute_cost(target_arrays, gates, n_qubits, n_layers,
