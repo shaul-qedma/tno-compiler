@@ -23,19 +23,28 @@ def random_brickwall(n_qubits, n_layers, first_odd=True, seed=0):
 
 
 def circuit_to_quimb_tn(qc):
-    """Convert a QuantumCircuit to a quimb unitary TN (split-gate)."""
+    """Convert a QuantumCircuit to a quimb unitary TN (split-gate).
+
+    Two endianness gaps between qiskit and quimb — local (within-gate
+    MSB/LSB) and global (site-to-index flattening) — collapse into one
+    fix: map qubit q → site (n-1-q) AND reverse the qubit tuple. With
+    this mapping, `MPO.to_dense()` of the result equals
+    `qiskit.Operator(qc).data`, and the rest of the codebase works in a
+    single convention.
+    """
     n = qc.num_qubits
     circ = qtn.Circuit(n)
     for layer_idx, instruction in enumerate(qc.data):
         gate = instruction.operation
         qubits = [qc.find_bit(q).index for q in instruction.qubits]
         mat = np.array(gate.to_matrix())
-        if len(qubits) == 2:
-            circ.apply_gate_raw(mat, tuple(qubits),
-                                gate_round=layer_idx, contract="split-gate")
-        elif len(qubits) == 1:
-            circ.apply_gate_raw(mat, tuple(qubits),
-                                gate_round=layer_idx, contract=True)
+        sites = tuple(n - 1 - q for q in reversed(qubits))
+        # contract=False keeps each gate as a separate tensor. contract=True
+        # for 1-qubit gates absorbs them into quimb's initial |0⟩ state
+        # (state-prep convention), which we don't want for a unitary TN.
+        contract = "split-gate" if len(qubits) == 2 else False
+        circ.apply_gate_raw(mat, sites, gate_round=layer_idx,
+                             contract=contract)
     return circ.get_uni()
 
 
@@ -58,12 +67,19 @@ def brickwall_ansatz_gates(n_qubits, n_layers, first_odd=True):
 
 
 def gates_to_circuit(gate_tensors, n_qubits, ansatz_structure):
-    """Convert optimized (2,2,2,2) gate tensors back to a QuantumCircuit."""
+    """Convert optimized (2,2,2,2) gate tensors back to a QuantumCircuit.
+
+    Compile works in quimb-site space where site s corresponds to qiskit
+    qubit (n-1-s). Place each optimized gate at the matching qiskit qubit
+    pair so that Operator(output) equals the compile's internal product.
+    See the comment on `circuit_to_quimb_tn`.
+    """
     qc = QuantumCircuit(n_qubits)
     idx = 0
     for _, pairs in ansatz_structure:
-        for q1, q2 in pairs:
+        for s1, s2 in pairs:
             mat = np.asarray(gate_tensors[idx]).reshape(4, 4)
-            qc.append(UnitaryGate(mat), [q1, q2])
+            qc.append(UnitaryGate(mat),
+                      [n_qubits - 1 - s2, n_qubits - 1 - s1])
             idx += 1
     return qc

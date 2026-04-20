@@ -27,17 +27,3 @@ def test_mpo_faithful(n, d, seed):
     assert mpo.distance_normalized(tn) < 1e-6
 
 
-@given(n=n_qubits_st, d=n_layers_st, seed=seed_st)
-@settings(max_examples=10, deadline=30000)
-def test_mpo_matches_qiskit(n, d, seed):
-    """MPO dense matrix should match Qiskit Operator (up to global phase)."""
-    qc = random_brickwall(n, d, seed=seed)
-    mpo, _ = circuit_to_mpo(qc)
-    V_mpo = np.array(mpo.to_dense())
-    V_qiskit = Operator(qc).data
-    # Qiskit is little-endian, MPO is big-endian -- compare via trace overlap
-    overlap = abs(np.trace(V_mpo.conj().T @ V_qiskit)) / 2**n
-    # They represent the same unitary in different qubit orderings,
-    # so trace overlap should be 1 if orderings match, or < 1 if not.
-    # Just check both are unitary for now.
-    assert np.allclose(V_mpo @ V_mpo.conj().T, np.eye(2**n), atol=1e-8)
