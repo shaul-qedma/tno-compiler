@@ -183,3 +183,58 @@ def init_L(upper_0, lower_0):
 @jax.jit
 def init_R(upper_last, lower_last):
     return jnp.einsum('abcd,ecbd->ae', upper_last, lower_last)
+
+
+# --- Batched (vmap'd) variants ---
+#
+# Each takes a leading batch dimension on every JAX-array argument.
+# Static / non-array arguments (e.g. `canonical`, `max_bond`) have
+# `in_axes=None`. Behavior is identical to the unbatched version, just
+# vectorized over the batch dim so the XLA compiler can fuse/parallelize.
+
+contract_R_batched = jax.vmap(contract_R, in_axes=0)
+contract_L_batched = jax.vmap(contract_L, in_axes=0)
+compute_gate_env_batched = jax.vmap(compute_gate_env, in_axes=0)
+env_and_polar_update_batched = jax.vmap(env_and_polar_update, in_axes=0)
+
+absorb_R_left_batched = jax.vmap(absorb_R_left, in_axes=0)
+absorb_R_right_batched = jax.vmap(absorb_R_right, in_axes=0)
+init_L_batched = jax.vmap(init_L, in_axes=0)
+init_R_batched = jax.vmap(init_R, in_axes=0)
+
+_merge_left_batched = jax.vmap(_merge_left, in_axes=0)
+_merge_right_batched = jax.vmap(_merge_right, in_axes=0)
+
+_canonicalize_left_batched = jax.vmap(_canonicalize_left, in_axes=0)
+_canonicalize_right_batched = jax.vmap(_canonicalize_right, in_axes=0)
+
+# For split/canonicalize, `canonical` and `max_bond` are static
+# (already marked via static_argnums in the unbatched jits). vmap
+# passes them through unchanged via `in_axes=None`.
+_split_full_batched = jax.vmap(_split_full, in_axes=(0, None, None))
+_split_randomized_batched = jax.vmap(_split_randomized, in_axes=(0, None, None))
+
+
+def merge_gate_with_mpo_pair_batched(gate, mpo1, mpo2, gate_is_left=True):
+    if gate_is_left:
+        return _merge_left_batched(mpo1, mpo2, gate)
+    else:
+        return _merge_right_batched(gate, mpo1, mpo2)
+
+
+def canonicalize_tensor_batched(T, left=True):
+    if left:
+        return _canonicalize_left_batched(T)
+    else:
+        return _canonicalize_right_batched(T)
+
+
+def split_merged_tensor_batched(T, canonical='left', max_bond=128):
+    """Batched split: T has leading batch dim. The branching on
+    matrix size uses T.shape[1:] (unbatched shape)."""
+    m_phys = T.shape[1] * T.shape[2] * T.shape[3]
+    n_phys = T.shape[4] * T.shape[5] * T.shape[6]
+    if min(m_phys, n_phys) > max_bond * 2:
+        return _split_randomized_batched(T, canonical, max_bond)
+    else:
+        return _split_full_batched(T, canonical, max_bond)
