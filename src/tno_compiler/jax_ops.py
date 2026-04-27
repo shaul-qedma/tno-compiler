@@ -164,11 +164,35 @@ def compute_gate_env(L, A1, A2, B1, B2, R):
     return jnp.einsum('ab,acde,efgh,bick,kjfl,hl->dgij',
                        L, A1, A2, B1, B2, R, optimize=True).conj()
 
+
+@jax.jit
+def gate_env_for_polar(L, A1, A2, B1, B2, R):
+    """Environment tensor in the shape `polar_from_env` expects —
+    unconjugated, i.e., the same thing `env_and_polar_update` computes
+    internally before its SVD step. Separated so callers can modify
+    the env (e.g., add a diversity regularizer) before taking the
+    polar factor.
+    """
+    return jnp.einsum('ab,acde,efgh,bick,kjfl,hl->dgij',
+                       L, A1, A2, B1, B2, R, optimize=True)
+
 @jax.jit
 def env_and_polar_update(L, A1, A2, B1, B2, R):
     """Fused: compute environment + polar decomposition update."""
     env = jnp.einsum('ab,acde,efgh,bick,kjfl,hl->dgij',
                       L, A1, A2, B1, B2, R, optimize=True)
+    u, _, vh = jnp.linalg.svd(env.conj().reshape(4, 4), full_matrices=False)
+    return (u @ vh).reshape(2, 2, 2, 2)
+
+
+@jax.jit
+def polar_from_env(env):
+    """Polar factor of a (2,2,2,2) environment tensor.
+
+    Separate from `env_and_polar_update` so the caller can modify
+    the env between its computation and the polar step — used by the
+    diversity-regularized batched sweep.
+    """
     u, _, vh = jnp.linalg.svd(env.conj().reshape(4, 4), full_matrices=False)
     return (u @ vh).reshape(2, 2, 2, 2)
 
@@ -203,6 +227,8 @@ contract_R_batched = jax.vmap(contract_R, in_axes=0)
 contract_L_batched = jax.vmap(contract_L, in_axes=0)
 compute_gate_env_batched = jax.vmap(compute_gate_env, in_axes=0)
 env_and_polar_update_batched = jax.vmap(env_and_polar_update, in_axes=0)
+polar_from_env_batched = jax.vmap(polar_from_env, in_axes=0)
+gate_env_for_polar_batched = jax.vmap(gate_env_for_polar, in_axes=0)
 
 absorb_R_left_batched = jax.vmap(absorb_R_left, in_axes=0)
 absorb_R_right_batched = jax.vmap(absorb_R_right, in_axes=0)

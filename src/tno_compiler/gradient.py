@@ -39,6 +39,7 @@ from .jax_ops import (
     identity_mpo_batched,
     contract_R_batched, contract_L_batched,
     env_and_polar_update_batched, compute_gate_env_batched,
+    gate_env_for_polar_batched, polar_from_env_batched,
     init_L_batched, init_R_batched,
     absorb_R_left_batched, absorb_R_right_batched,
     merge_gate_with_mpo_pair_batched,
@@ -198,7 +199,9 @@ def _compute_cost_batched(target_arrays_batched, gates, n_qubits, n_layers,
 
 
 def _optimize_layer_inplace_batched(gates, odd, upper, lower, n_inner=3,
-                                      drop_rate=0.0, rng=None):
+                                      drop_rate=0.0, rng=None,
+                                      repel_lambda=0.0,
+                                      repel_tangential=True):
     """Gauss-Seidel polar update over all gates in a single brickwall
     layer, vectorized over the ensemble batch dim.
 
@@ -216,11 +219,22 @@ def _optimize_layer_inplace_batched(gates, odd, upper, lower, n_inner=3,
     coin. The "skipped" elements keep their current gate value; others
     take the polar update. `jnp.where` fuses both cases into one XLA op
     so the batch dim stays tight.
+
+    Diversity regularization (`repel_lambda` > 0): at each update,
+    push each member away from the mean of its siblings at this gate
+    position. `repel_tangential=True` (default) projects out the
+    component of the repulsion along the env direction — the "toward
+    V" direction — so members spread tangentially around V instead of
+    being pushed in random directions that mostly point away from V.
     """
     n_gates = len(gates)
     i_start = 0 if odd else 1
     B = gates[0].shape[0]
     drop = drop_rate > 0.0
+    repel = repel_lambda > 0.0 and B > 1
+    # Per-member coefficient so the regularizer stays O(1) regardless of B
+    # (sum-of-others scales with B).
+    repel_coef = repel_lambda / B if repel else 0.0
 
     def _init_LR():
         if odd:
@@ -232,9 +246,34 @@ def _optimize_layer_inplace_batched(gates, odd, upper, lower, n_inner=3,
     def _apply_drop(old, new):
         if not drop:
             return new
-        # Independent coins per batch element.
         mask = jnp.asarray(rng.random(B) >= drop_rate).reshape(B, 1, 1, 1, 1)
         return jnp.where(mask, new, old)
+
+    def _polar_with_repel(g_idx, L_in, A1, A2, B1, B2, R):
+        """Env + optional repulsion + polar. Falls back to the fused
+        kernel when `repel=False` to avoid the extra SVD cost.
+
+        With `repel_tangential=True`, the repulsion direction is
+        projected perpendicular to the env direction. The env points
+        toward V at this gate, so the parallel component of a
+        sibling-average would undo the toward-V pull; the orthogonal
+        component spreads members tangentially around V, which is what
+        Kalloor's "convex hull containing V" geometry actually needs.
+        """
+        if not repel:
+            return env_and_polar_update_batched(L_in, A1, A2, B1, B2, R)
+        env = gate_env_for_polar_batched(L_in, A1, A2, B1, B2, R)
+        sum_all = gates[g_idx].sum(axis=0, keepdims=True)    # (1, 2, 2, 2, 2)
+        others = sum_all - gates[g_idx]                       # (B, 2, 2, 2, 2)
+        if repel_tangential:
+            # Real Frobenius inner product per batch element
+            inner = jnp.real(jnp.sum(env.conj() * others,
+                                     axis=(1, 2, 3, 4)))      # (B,)
+            norm_sq = jnp.real(jnp.sum(env.conj() * env,
+                                       axis=(1, 2, 3, 4)))    # (B,)
+            alpha = inner / (norm_sq + 1e-12)                 # (B,)
+            others = others - alpha[:, None, None, None, None] * env
+        return polar_from_env_batched(env - repel_coef * others)
 
     for _ in range(n_inner):
         # --- Left-to-right pass ---
@@ -251,8 +290,8 @@ def _optimize_layer_inplace_batched(gates, odd, upper, lower, n_inner=3,
         L = L_init
         for g in range(n_gates):
             i_mpo = i_start + 2 * g
-            new_gate = env_and_polar_update_batched(
-                L, upper[i_mpo], upper[i_mpo + 1],
+            new_gate = _polar_with_repel(
+                g, L, upper[i_mpo], upper[i_mpo + 1],
                 lower[i_mpo], lower[i_mpo + 1], R_envs[g])
             gates[g] = _apply_drop(gates[g], new_gate)
             if g < n_gates - 1:
@@ -273,8 +312,8 @@ def _optimize_layer_inplace_batched(gates, odd, upper, lower, n_inner=3,
         R = R_init
         for g in reversed(range(n_gates)):
             i_mpo = i_start + 2 * g
-            new_gate = env_and_polar_update_batched(
-                L_envs[g], upper[i_mpo], upper[i_mpo + 1],
+            new_gate = _polar_with_repel(
+                g, L_envs[g], upper[i_mpo], upper[i_mpo + 1],
                 lower[i_mpo], lower[i_mpo + 1], R)
             gates[g] = _apply_drop(gates[g], new_gate)
             if g > 0:
@@ -285,7 +324,7 @@ def _optimize_layer_inplace_batched(gates, odd, upper, lower, n_inner=3,
 
 def polar_sweep_batched(target_arrays_batched, gates, n_qubits, n_layers,
                          max_bond=128, first_odd=True, n_inner=3,
-                         drop_rate=0.0, rng=None):
+                         drop_rate=0.0, rng=None, repel_lambda=0.0):
     """One full alternating-direction polar sweep (Gibbs & Cincio 2025),
     vectorized over an ensemble batch dim B.
 
@@ -295,7 +334,7 @@ def polar_sweep_batched(target_arrays_batched, gates, n_qubits, n_layers,
             target but carrying the batch dim lets downstream envelopes
             diverge per member as gates evolve.
         gates: list of (B, 2, 2, 2, 2) JAX arrays. Mutated in place.
-        drop_rate, rng: see `_optimize_layer_inplace_batched`.
+        drop_rate, rng, repel_lambda: see `_optimize_layer_inplace_batched`.
 
     Returns:
         (B,) cost vector (`2 − 2·Re Tr(V†U)/2ⁿ` per batch element).
@@ -321,7 +360,7 @@ def polar_sweep_batched(target_arrays_batched, gates, n_qubits, n_layers,
         odd = structure[layer][0]
         _optimize_layer_inplace_batched(
             gate_layers[layer], odd, top, lower_envs[layer], n_inner,
-            drop_rate=drop_rate, rng=rng)
+            drop_rate=drop_rate, rng=rng, repel_lambda=repel_lambda)
         if layer > 0:
             merge = (_merge_layer_right_to_left_batched if sr
                      else _merge_layer_left_to_right_batched)
@@ -345,7 +384,7 @@ def polar_sweep_batched(target_arrays_batched, gates, n_qubits, n_layers,
         odd = structure[layer][0]
         _optimize_layer_inplace_batched(
             gate_layers[layer], odd, upper_envs[layer], bottom, n_inner,
-            drop_rate=drop_rate, rng=rng)
+            drop_rate=drop_rate, rng=rng, repel_lambda=repel_lambda)
         if layer < L - 1:
             merge = (_merge_layer_right_to_left_batched if sr
                      else _merge_layer_left_to_right_batched)

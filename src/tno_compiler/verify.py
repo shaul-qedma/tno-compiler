@@ -22,7 +22,7 @@ max_i d_i is a lower bound on (½)·‖E - V‖_◇.
 """
 
 import numpy as np
-from qiskit.quantum_info import Statevector
+from qiskit.quantum_info import Operator, Statevector, SuperOp, diamond_norm
 
 
 def _random_pure_states(n_qubits, n_samples, seed):
@@ -96,4 +96,93 @@ def sampled_max_trace_distance(target, circuits, weights,
         'max_td': max(tds),
         'mean_td': float(np.mean(tds)),
         'trace_distances': tds,
+    }
+
+
+def circuit_superop_matrix(circuit):
+    """Dense superoperator matrix for a unitary circuit channel.
+
+    The returned matrix represents `rho -> U rho U†` in Qiskit's
+    vectorization convention. It has shape `(4**n, 4**n)`.
+    """
+    return np.asarray(SuperOp(Operator(circuit)).data, dtype=complex)
+
+
+def ensemble_superop_matrix(circuits, weights):
+    """Dense superoperator for `sum_i weights[i] U_i rho U_i†`."""
+    if not circuits:
+        raise ValueError("circuits must be non-empty")
+    weights = np.asarray(weights, dtype=float)
+    if len(circuits) != len(weights):
+        raise ValueError("circuits and weights must have the same length")
+
+    n = circuits[0].num_qubits
+    dim2 = 4 ** n
+    S = np.zeros((dim2, dim2), dtype=complex)
+    for circuit, weight in zip(circuits, weights):
+        if weight < 1e-15:
+            continue
+        S += weight * circuit_superop_matrix(circuit)
+    return S
+
+
+def exact_diamond_distance(target, circuits, weights, **diamond_kwargs):
+    """Exact diamond distance between an ensemble channel and a target unitary.
+
+    Returns both conventions:
+      - `diamond_norm`: `||E - V||_diamond`
+      - `diamond_distance`: `0.5 * ||E - V||_diamond`
+
+    `diamond_distance` matches the convention used in Kalloor Methods:
+    `d_diamond(E, V) = 1/2 ||E - V||_diamond`.
+
+    This is dense and SDP-based. It is intended for small n only.
+    """
+    n = target.num_qubits
+    S_ens = ensemble_superop_matrix(circuits, weights)
+    S_tgt = circuit_superop_matrix(target)
+    diff = SuperOp(
+        S_ens - S_tgt,
+        input_dims=(2,) * n,
+        output_dims=(2,) * n,
+    )
+    raw = float(diamond_norm(diff, **diamond_kwargs))
+    return {
+        'diamond_norm': raw,
+        'diamond_distance': 0.5 * raw,
+    }
+
+
+def unitary_channel_diamond_distance_from_matrices(U, V):
+    """Exact diamond distance between two unitary channels.
+
+    For channels `rho -> U rho U†` and `rho -> V rho V†`, the diamond
+    distance is determined by the distance from 0 to the convex hull of
+    the eigenvalues of `U†V`. This avoids an SDP for single-circuit
+    comparisons.
+
+    Returns the same two conventions as `exact_diamond_distance`.
+    """
+    W = np.asarray(U).conj().T @ np.asarray(V)
+    eigvals = np.linalg.eigvals(W)
+    pts = np.column_stack([eigvals.real, eigvals.imag])
+
+    def dist_to_segment(a, b):
+        ab = b - a
+        denom = float(np.dot(ab, ab))
+        if denom < 1e-30:
+            return float(np.linalg.norm(a))
+        t = float(np.clip(-np.dot(a, ab) / denom, 0.0, 1.0))
+        return float(np.linalg.norm(a + t * ab))
+
+    nu = min(float(abs(z)) for z in eigvals)
+    for i in range(len(pts)):
+        for j in range(i + 1, len(pts)):
+            nu = min(nu, dist_to_segment(pts[i], pts[j]))
+    nu = float(np.clip(nu, 0.0, 1.0))
+    raw = 2.0 * np.sqrt(max(1.0 - nu * nu, 0.0))
+    return {
+        'diamond_norm': raw,
+        'diamond_distance': 0.5 * raw,
+        'convex_hull_origin_distance': nu,
     }

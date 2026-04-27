@@ -7,11 +7,15 @@ name = "tno-compiler"
 version = "0.1.0"
 requires-python = ">=3.10"
 dependencies = [
-    "jax[cpu]>=0.4.20",
+    "bqskit>=1.2.1",
+    "jax>=0.4.20",
     "scipy>=1.11",
 ]
 
 [project.optional-dependencies]
+cpu = ["jax[cpu]>=0.4.20"]
+gpu = ["jax[cuda12]>=0.4.20"]
+aqc = ["qiskit-addon-aqc-tensor", "quimb", "qiskit-quimb"]
 test = [
     "pytest>=7.0",
     "hypothesis>=6.0",
