@@ -327,6 +327,7 @@ def compile_state_optimal(
     lo=1, hi=24, n_seeds=3, max_iter=100,
     max_bond=64, first_odd=True, seed=0, warm_start=True,
     init_perturb_scale=0.1, drop_rate=0.0,
+    warm_start_cache=None,
 ):
     """Binary-search the smallest brickwall depth `D*` such that the best
     of `n_seeds` polar compiles at `D*` reaches state-infidelity ≤ `threshold`.
@@ -362,7 +363,12 @@ def compile_state_optimal(
     )
 
     search: dict[int, dict] = {}
-    best_so_far: dict[int, list] = {}
+    # If a caller-provided cache is given, share it (the caller can carry
+    # best gates across compile_state_optimal calls — across thresholds
+    # on the same target — to avoid the random-init lottery at tight tols).
+    best_so_far: dict[int, list] = (
+        warm_start_cache if warm_start_cache is not None else {}
+    )
 
     def _make_warm_start(d: int):
         if not warm_start or not best_so_far:

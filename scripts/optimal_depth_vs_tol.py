@@ -75,6 +75,11 @@ def main() -> None:
             current_hi = args.hi  # tighten as tolerances tighten
             current_lo = args.lo
             last_D_opt = None
+            # Shared warm-start cache across thresholds on this target.
+            # Each compile_circuit_optimal call updates it with best gates
+            # seen at every probe; subsequent calls reuse those for any
+            # depth they re-probe.
+            warm_cache: dict[int, list] = {}
             for tol in sorted_tols:
                 t0 = time.time()
                 D_opt, _, info, search = compile_circuit_optimal(
@@ -83,6 +88,7 @@ def main() -> None:
                     n_seeds=args.n_seeds, tol=args.mpo_tol,
                     max_bond=args.mpo_max_bond, max_iter=args.max_iter,
                     first_odd=True, seed=args.target_seed,
+                    warm_start_cache=warm_cache,
                 )
                 elapsed = time.time() - t0
                 # Best compile_error across all probed depths (informative

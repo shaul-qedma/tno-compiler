@@ -173,7 +173,8 @@ def _warm_start_init(prev_depth: int, prev_gates: list, target_depth: int,
 def compile_circuit_optimal(target, threshold, *, lo=1, hi=24, n_seeds=3,
                               tol=1e-2, max_bond=256, max_iter=200,
                               first_odd=True, seed=0, warm_start=True,
-                              init_perturb_scale=0.1, drop_rate=0.0):
+                              init_perturb_scale=0.1, drop_rate=0.0,
+                              warm_start_cache=None):
     """Binary-search the smallest brickwall depth `D*` such that the best
     of `n_seeds` polar compiles at depth `D*` reaches Frobenius
     ``compile_error <= threshold``.
@@ -197,7 +198,11 @@ def compile_circuit_optimal(target, threshold, *, lo=1, hi=24, n_seeds=3,
         target, max_bond=max_bond, tol=tol)
 
     search: dict[int, dict] = {}  # depth → {seeds, gate_lists, histories}
-    best_so_far: dict[int, list] = {}  # depth → best gates seen at that depth
+    # If caller passes a cache, share it — best gates from previous calls
+    # (e.g., across thresholds on the same target) will warm-start probes.
+    best_so_far: dict[int, list] = (
+        warm_start_cache if warm_start_cache is not None else {}
+    )  # depth → best gates seen at that depth
 
     def _make_warm_start(d: int):
         """Return warm-start init derived from the closest previously-best
