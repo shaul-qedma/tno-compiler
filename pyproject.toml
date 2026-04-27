@@ -15,7 +15,7 @@ dependencies = [
 [project.optional-dependencies]
 cpu = ["jax[cpu]>=0.4.20"]
 gpu = ["jax[cuda12]>=0.4.20"]
-aqc = ["qiskit-addon-aqc-tensor", "quimb"]
+aqc = ["qiskit-addon-aqc-tensor", "quimb", "qiskit-quimb"]
 test = [
     "pytest>=7.0",
     "hypothesis>=6.0",
