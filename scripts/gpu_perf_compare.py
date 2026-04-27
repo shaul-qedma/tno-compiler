@@ -65,24 +65,60 @@ def _print_jax_diag() -> None:
 # ---------- Target loading ----------
 
 
-def load_target(spec: str):
-    """Return (qiskit_circuit, padded_to_even, label).
+_REPO_ROOT = Path(__file__).resolve().parent.parent
+_NOTEBOOK_DIR = _REPO_ROOT / "data" / "notebook"
 
-    - "notebook_stepsN" → load circ_qasm2_qiskit_stepsN.qasm
-      from the repo root, restrict to the active 37 qubits, pad to 38.
+_NOTEBOOK_ACTIVE_QUBITS = [
+    2, 3, 4, 5, 6, 7, 17, 25, 26, 27, 37, 45, 46, 47, 57,
+    61, 62, 63, 64, 65, 66, 67, 76, 81, 82, 83, 84, 85, 86, 87,
+    97, 102, 103, 104, 105, 106, 107,
+]
+
+
+def _load_notebook_active(qasm_path: Path):
+    """Restrict the 108-qubit notebook circuit to its 37 active qubits."""
+    from qiskit import QuantumCircuit
+    qc = QuantumCircuit.from_qasm_file(str(qasm_path))
+    qc.remove_final_measurements(inplace=True)
+    idx_map = {q: i for i, q in enumerate(_NOTEBOOK_ACTIVE_QUBITS)}
+    out = QuantumCircuit(len(_NOTEBOOK_ACTIVE_QUBITS))
+    for ci in qc.data:
+        new_qubits = [out.qubits[idx_map[qc.find_bit(q).index]] for q in ci.qubits]
+        out.append(ci.operation, new_qubits, [])
+    return out
+
+
+def _pad_to_even(qc):
+    """Pad to even qubit count — `_layer_envs_onepass_batched` assumes even n."""
+    from qiskit import QuantumCircuit
+    if qc.num_qubits % 2 == 0:
+        return qc
+    out = QuantumCircuit(qc.num_qubits + 1)
+    for ci in qc.data:
+        new_qs = [out.qubits[qc.find_bit(q).index] for q in ci.qubits]
+        out.append(ci.operation, new_qs, [])
+    out.rz(0.0, qc.num_qubits)
+    return out
+
+
+def load_target(spec: str, qasm_path: str | None = None):
+    """Return (qiskit_circuit, label).
+
+    - "notebook_stepsN" → load `data/notebook/circ_qasm2_qiskit_stepsN.qasm`
+      (bundled; N ∈ {5, 10, 20, 30}). Override path with `qasm_path`.
+      Restricts to the 37 active qubits and pads to 38 for even parity.
     - "tfi:N:STEPS" → tfi_trotter_circuit(N, J=1, g=1, h=0.5, dt=0.1, STEPS).
     """
-    from qiskit.circuit import QuantumCircuit
-
     if spec.startswith("notebook_steps"):
         steps = spec.replace("notebook_steps", "")
-        path = Path(
-            f"/Users/shaulbarkan/Qedma/Code/transpile-gd/circ_qasm2_qiskit_steps{steps}.qasm"
-        )
-        from aqc_lib import load_active_circuit
-        from tno_state_prep import pad_to_even
-        qc = load_active_circuit(str(path))
-        qc = pad_to_even(qc)
+        path = (Path(qasm_path) if qasm_path
+                else _NOTEBOOK_DIR / f"circ_qasm2_qiskit_steps{steps}.qasm")
+        if not path.exists():
+            raise FileNotFoundError(
+                f"notebook qasm not found: {path}. Pass --qasm or check "
+                f"data/notebook/ in the repo."
+            )
+        qc = _pad_to_even(_load_notebook_active(path))
         return qc, f"notebook_steps{steps}"
 
     if spec.startswith("tfi:"):
@@ -296,12 +332,14 @@ def main() -> None:
         "--methods", nargs="+", default=["tno", "aqc"],
         choices=["tno", "aqc"],
     )
+    ap.add_argument("--qasm", default=None,
+                    help="Override path for notebook_stepsN target")
     ap.add_argument("--out", default="gpu_perf_compare.json")
     args = ap.parse_args()
 
     _print_jax_diag()
 
-    qc, label = load_target(args.target)
+    qc, label = load_target(args.target, qasm_path=args.qasm)
     target_2q_depth = qc.depth(filter_function=lambda ci: ci.operation.num_qubits >= 2)
     print(
         f"\n[target] {label}  qubits={qc.num_qubits}  ops={len(qc.data)}  "

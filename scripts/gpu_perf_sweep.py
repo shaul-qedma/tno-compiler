@@ -65,6 +65,15 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--tfi-n", type=int, nargs="+", default=[10, 14, 20])
     ap.add_argument("--tfi-steps", type=int, nargs="+", default=[4, 8])
+    ap.add_argument(
+        "--notebook-steps", type=int, nargs="+", default=[],
+        help="Sweep notebook_stepsN targets (bundled in data/notebook/). "
+             "Combines with --tfi-* (both kinds run if both given).",
+    )
+    ap.add_argument(
+        "--qasm-template", default=None,
+        help="Override the bundled notebook qasm path (use {steps} placeholder)",
+    )
     ap.add_argument("--depths", type=int, nargs="+", default=[2, 4, 6, 8, 10])
     ap.add_argument("--iters", type=int, default=30)
     ap.add_argument("--max-bond", type=int, default=64)
@@ -88,54 +97,60 @@ def main() -> None:
         writer = csv.DictWriter(f, fieldnames=CSV_FIELDS)
         writer.writeheader()
 
+        configs: list[tuple[str, str | None]] = []  # (target_spec, qasm_path)
         for n in args.tfi_n:
             for steps in args.tfi_steps:
-                target = f"tfi:{n}:{steps}"
-                qc, label = load_target(target)
-                target_2q = qc.depth(
-                    filter_function=lambda ci: ci.operation.num_qubits >= 2)
-                print(
-                    f"\n=== {label}  qubits={n}  2q-depth={target_2q} "
-                    f"({steps} TFI steps) ===",
-                    flush=True,
-                )
+                configs.append((f"tfi:{n}:{steps}", None))
+        for steps in args.notebook_steps:
+            qpath = (args.qasm_template.format(steps=steps)
+                     if args.qasm_template else None)
+            configs.append((f"notebook_steps{steps}", qpath))
 
-                for depth in args.depths:
-                    print(f"\n--- depth={depth} ---", flush=True)
-                    if "tno" in args.methods:
-                        try:
-                            t0 = time.time()
-                            r = time_tno(qc, depth, args.iters, args.max_bond,
-                                          args.n_seeds, args.seed)
-                            r["wall_s"] = time.time() - t0
-                        except Exception as e:
-                            r = {"method": "tno",
-                                 "error": f"{type(e).__name__}: {str(e)[:300]}"}
-                            print(f"  [tno] FAILED: {r['error']}", flush=True)
-                        full.append({"target": target, "depth": depth, **r})
-                        row = _row_for("tno", target, qc, depth, args.iters, r)
-                        writer.writerow(row); f.flush()
-                        rows.append(row)
+        for target, qasm_path in configs:
+            qc, label = load_target(target, qasm_path=qasm_path)
+            target_2q = qc.depth(
+                filter_function=lambda ci: ci.operation.num_qubits >= 2)
+            print(
+                f"\n=== {label}  qubits={qc.num_qubits}  2q-depth={target_2q} ===",
+                flush=True,
+            )
 
-                    if "aqc" in args.methods:
-                        try:
-                            t0 = time.time()
-                            r = time_aqc(qc, depth, args.iters, args.max_bond,
-                                          args.seed)
-                            r["wall_s"] = time.time() - t0
-                        except Exception as e:
-                            r = {"method": "aqc",
-                                 "error": f"{type(e).__name__}: {str(e)[:300]}"}
-                            print(f"  [aqc] FAILED: {r['error']}", flush=True)
-                        full.append({"target": target, "depth": depth, **r})
-                        row = _row_for("aqc", target, qc, depth, args.iters, r)
-                        writer.writerow(row); f.flush()
-                        rows.append(row)
+            for depth in args.depths:
+                print(f"\n--- depth={depth} ---", flush=True)
+                if "tno" in args.methods:
+                    try:
+                        t0 = time.time()
+                        r = time_tno(qc, depth, args.iters, args.max_bond,
+                                      args.n_seeds, args.seed)
+                        r["wall_s"] = time.time() - t0
+                    except Exception as e:
+                        r = {"method": "tno",
+                             "error": f"{type(e).__name__}: {str(e)[:300]}"}
+                        print(f"  [tno] FAILED: {r['error']}", flush=True)
+                    full.append({"target": target, "depth": depth, **r})
+                    row = _row_for("tno", target, qc, depth, args.iters, r)
+                    writer.writerow(row); f.flush()
+                    rows.append(row)
 
-                    Path(args.out_json).write_text(json.dumps({
-                        "config": vars(args),
-                        "results": full,
-                    }, indent=2, default=str))
+                if "aqc" in args.methods:
+                    try:
+                        t0 = time.time()
+                        r = time_aqc(qc, depth, args.iters, args.max_bond,
+                                      args.seed)
+                        r["wall_s"] = time.time() - t0
+                    except Exception as e:
+                        r = {"method": "aqc",
+                             "error": f"{type(e).__name__}: {str(e)[:300]}"}
+                        print(f"  [aqc] FAILED: {r['error']}", flush=True)
+                    full.append({"target": target, "depth": depth, **r})
+                    row = _row_for("aqc", target, qc, depth, args.iters, r)
+                    writer.writerow(row); f.flush()
+                    rows.append(row)
+
+                Path(args.out_json).write_text(json.dumps({
+                    "config": vars(args),
+                    "results": full,
+                }, indent=2, default=str))
 
     # Final compact table
     print("\n[summary]", flush=True)
