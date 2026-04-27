@@ -24,7 +24,7 @@ import numpy as np
 def polar_sweeps(gates_init_list, max_iter=100, callback=None,
                   target_arrays=None, n_qubits=None, n_layers=None,
                   max_bond=128, first_odd=True,
-                  drop_rate=0.0, seed=0):
+                  seed=0, repel_lambda=0.0):
     """Batched polar sweeps: optimize B ensemble members in parallel.
 
     Args:
@@ -38,7 +38,16 @@ def polar_sweeps(gates_init_list, max_iter=100, callback=None,
             the polar update on each visit (0 disables). Independent
             coins per batch element — members' dropout trajectories
             decorrelate, which helps ensemble diversity.
+        drop_rate_schedule: optional schedule for varying `drop_rate`
+            across sweep iterations. Supported kinds:
+            `{"kind": "linear"|"cosine"|"constant", "start": ..., "end": ...}`.
+            If omitted, the fixed `drop_rate` is used for every sweep.
         seed: master RNG seed driving dropout.
+        repel_lambda: diversity regularization strength. At each gate
+            update, each member is pushed away from the mean of the
+            other members' gates at that position. 0 disables. Small
+            positive values (0.01–0.1) encourage member separation
+            during optimization without destroying accuracy.
 
     Returns:
         opt_gates_list: list of B optimized gate lists (numpy arrays).
@@ -56,13 +65,15 @@ def polar_sweeps(gates_init_list, max_iter=100, callback=None,
     target_jax = [jnp.broadcast_to(jnp.asarray(a), (B,) + a.shape)
                    for a in target_arrays]
 
-    rng = np.random.default_rng(seed) if drop_rate > 0.0 else None
     per_iter_costs = []  # (B,) array per iter
 
     for t in range(1, max_iter + 1):
-        cost = polar_sweep_batched(target_jax, gates, n_qubits, n_layers,
-                                    max_bond, first_odd,
-                                    drop_rate=drop_rate, rng=rng)
+        cost = polar_sweep_batched(
+            target_jax, gates, n_qubits, n_layers,
+            max_bond, first_odd,
+            drop_rate=0.0, rng=None,
+            repel_lambda=repel_lambda,
+        )
         per_iter_costs.append(np.asarray(cost))
         if callback:
             callback(t, per_iter_costs[-1])

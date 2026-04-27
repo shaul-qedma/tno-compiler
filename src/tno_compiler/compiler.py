@@ -31,6 +31,25 @@ def _qc_to_gate_tensors_local(qc):
     return tensors
 
 
+def _perturbed_identity_gates(n_gates: int, scale: float, seed: int) -> list:
+    """Build n_gates init gates as `exp(scale · H)` for random anti-Hermitian H.
+
+    With scale=0 → all identities (V = I, V|0⟩ = |0⟩).
+    With scale ~ 0.1 → small spread around identity, retains the
+    "near-identity" basin while giving each seed a different starting point.
+    Better than Haar-random for state-prep where identity is informative.
+    """
+    from scipy.linalg import expm
+    rng = np.random.default_rng(seed)
+    gates = []
+    for _ in range(n_gates):
+        Z = rng.standard_normal((4, 4)) + 1j * rng.standard_normal((4, 4))
+        H = Z - Z.conj().T   # anti-Hermitian generator
+        U = expm(scale * H)
+        gates.append(U.reshape(2, 2, 2, 2).astype(complex))
+    return gates
+
+
 def build_target_arrays(target, max_bond=256, tol=1e-2):
     """Compress `target` to an MPO and produce the adjoint-reindexed
     arrays the compile's cost function expects.
@@ -56,8 +75,7 @@ def build_target_arrays(target, max_bond=256, tol=1e-2):
 def compile_circuit(target, ansatz_depth, tol=1e-2,
                      max_bond=256, max_iter=500, lr=1e-3,
                      method="polar", first_odd=True,
-                     init_gates=None, callback=None,
-                     drop_rate=0.0, drop_rate_schedule=None, seed=0):
+                     init_gates=None, callback=None, seed=0):
     """Compile `target` to a brickwall of depth `ansatz_depth`.
 
     Args:
@@ -75,12 +93,8 @@ def compile_circuit(target, ansatz_depth, tol=1e-2,
         init_gates: optional list of (2,2,2,2) initial gate tensors.
             If None, an identity init is used.
         callback: optional callable(step, cost) for progress reporting.
-        drop_rate: per-gate polar-sweep dropout probability (0 disables).
-            Polar method only.
-        drop_rate_schedule: optional sweep-wise dropout schedule for the
-            polar method. Supported kinds: `linear`, `cosine`, `constant`.
-        seed: master RNG seed; drives dropout (init randomness is the
-            caller's responsibility via `init_gates`).
+        seed: master RNG seed (init randomness is the caller's
+            responsibility via `init_gates`).
 
     Returns:
         compiled: `QuantumCircuit` implementing the compiled brickwall.
@@ -105,9 +119,7 @@ def compile_circuit(target, ansatz_depth, tol=1e-2,
             [init_gates], max_iter=max_iter, callback=callback,
             target_arrays=target_arrays, n_qubits=n_qubits,
             n_layers=ansatz_depth, max_bond=actual_bond,
-            first_odd=first_odd,
-            drop_rate=drop_rate, drop_rate_schedule=drop_rate_schedule,
-            seed=seed)
+            first_odd=first_odd, seed=seed)
         opt_gates = opt_gates_list[0]
         cost_history = hist_list[0]
     elif method == "adam":
@@ -159,7 +171,8 @@ def _warm_start_init(prev_depth: int, prev_gates: list, target_depth: int,
 
 def compile_circuit_optimal(target, threshold, *, lo=1, hi=24, n_seeds=3,
                               tol=1e-2, max_bond=256, max_iter=200,
-                              first_odd=True, seed=0, warm_start=True):
+                              first_odd=True, seed=0, warm_start=True,
+                              init_perturb_scale=0.1):
     """Binary-search the smallest brickwall depth `D*` such that the best
     of `n_seeds` polar compiles at depth `D*` reaches Frobenius
     ``compile_error <= threshold``.
@@ -204,11 +217,12 @@ def compile_circuit_optimal(target, threshold, *, lo=1, hi=24, n_seeds=3,
         ws = _make_warm_start(d)
         if ws is not None:
             init_gates_list.append(ws)
-        haar_seeds_needed = n_seeds - len(init_gates_list)
-        for s in range(haar_seeds_needed):
-            init_gates_list.append(_qc_to_gate_tensors_local(
-                random_brickwall(n_qubits, d, first_odd=first_odd,
-                                 seed=seed + 1000 * d + s)))
+        n_gates_d = _gates_for_depth(n_qubits, d, first_odd)
+        seeds_needed = n_seeds - len(init_gates_list)
+        for s in range(seeds_needed):
+            init_gates_list.append(_perturbed_identity_gates(
+                n_gates_d, init_perturb_scale, seed + 1000 * d + s,
+            ))
         # ONE batched polar call for all seeds.
         opt_gates_list, hist_list = polar_sweeps(
             init_gates_list, max_iter=max_iter,

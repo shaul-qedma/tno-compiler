@@ -24,7 +24,6 @@ from .optim import polar_sweeps
 def compile_ensemble(target, ansatz_depth, n_circuits=5,
                       tol=1e-2, max_bond=256,
                       max_iter=200, lr=2e-2, first_odd=True, seed=0,
-                      drop_rate=0.0, drop_rate_schedule=None,
                       repel_lambda=0.0, top_k=None, n_pairs=0,
                       perturb_scale=0.1):
     """Compile a weighted ensemble of brickwall circuits approximating V.
@@ -51,8 +50,6 @@ def compile_ensemble(target, ansatz_depth, n_circuits=5,
         tol, max_bond: passed to MPO compression.
         max_iter: polar sweeps per member.
         lr: unused (polar method); kept for ADAM-compat signature.
-        drop_rate: per-gate polar-sweep dropout probability.
-        drop_rate_schedule: optional sweep-wise dropout schedule.
         repel_lambda: diversity regularization strength in the batched
             polar sweep. Each gate is pushed away from the mean of its
             siblings' gates at the same position. 0 disables.
@@ -89,7 +86,6 @@ def compile_ensemble(target, ansatz_depth, n_circuits=5,
         init_gates_list, max_iter=max_iter,
         target_arrays=target_arrays, n_qubits=n, n_layers=ansatz_depth,
         max_bond=actual_bond, first_odd=first_odd,
-        drop_rate=drop_rate, drop_rate_schedule=drop_rate_schedule,
         seed=seed, repel_lambda=repel_lambda)
 
     ansatz = brickwall_ansatz_gates(n, ansatz_depth, first_odd)

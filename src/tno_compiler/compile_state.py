@@ -39,7 +39,10 @@ import numpy as np
 import quimb.tensor as qtn
 
 from .brickwall import brickwall_ansatz_gates, gates_to_circuit, random_brickwall
-from .compiler import _gates_for_depth, _qc_to_gate_tensors_local, _warm_start_init
+from .compiler import (
+    _gates_for_depth, _perturbed_identity_gates,
+    _qc_to_gate_tensors_local, _warm_start_init,
+)
 from .gradient import compute_cost_and_grad
 from .optim import polar_sweeps, riemannian_adam
 
@@ -182,8 +185,6 @@ def compile_state(
     first_odd=True,
     init_gates=None,
     callback=None,
-    drop_rate=0.0,
-    drop_rate_schedule=None,
     seed=0,
     lr=1e-3,
 ):
@@ -201,9 +202,8 @@ def compile_state(
             For state compression the merged envelopes have bond at most
             (target MPS bond) × (gate ansatz width); set to a value
             comparable to state_max_bond.
-        max_iter, method, first_odd, init_gates, callback, drop_rate,
-            drop_rate_schedule, seed, lr: passed through to
-            `polar_sweeps` / `riemannian_adam`.
+        max_iter, method, first_odd, init_gates, callback, seed, lr:
+            passed through to `polar_sweeps` / `riemannian_adam`.
 
     Returns:
         compiled: QuantumCircuit implementing the brickwall V.
@@ -245,8 +245,6 @@ def compile_state(
             n_layers=ansatz_depth,
             max_bond=max_bond,
             first_odd=first_odd,
-            drop_rate=drop_rate,
-            drop_rate_schedule=drop_rate_schedule,
             seed=seed,
         )
         opt_gates = opt_gates_list[0]
@@ -326,6 +324,7 @@ def compile_state_optimal(
     state_max_bond=64, state_cutoff=1e-10,
     lo=1, hi=24, n_seeds=3, max_iter=100,
     max_bond=64, first_odd=True, seed=0, warm_start=True,
+    init_perturb_scale=0.1,
 ):
     """Binary-search the smallest brickwall depth `D*` such that the best
     of `n_seeds` polar compiles at `D*` reaches state-infidelity ≤ `threshold`.
@@ -378,11 +377,12 @@ def compile_state_optimal(
         ws = _make_warm_start(d)
         if ws is not None:
             init_gates_list.append(ws)
-        haar_needed = n_seeds - len(init_gates_list)
-        for s in range(haar_needed):
-            init_gates_list.append(_qc_to_gate_tensors_local(
-                random_brickwall(n_qubits, d, first_odd=first_odd,
-                                 seed=seed + 1000 * d + s)))
+        n_gates_d = _gates_for_depth(n_qubits, d, first_odd)
+        seeds_needed = n_seeds - len(init_gates_list)
+        for s in range(seeds_needed):
+            init_gates_list.append(_perturbed_identity_gates(
+                n_gates_d, init_perturb_scale, seed + 1000 * d + s,
+            ))
         # ONE batched polar over all seeds.
         opt_gates_list, hist_list = polar_sweeps(
             init_gates_list, max_iter=max_iter,
