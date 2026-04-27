@@ -14,7 +14,13 @@ dependencies = [
 
 [project.optional-dependencies]
 cpu = ["jax[cpu]>=0.4.20"]
-gpu = ["jax[cuda12]>=0.4.20"]
+# Pin gpu trio to the same minor so jax-cuda12-plugin matches jaxlib.
+# Plugin 0.10.0 against jaxlib 0.9.x silently disables the GPU backend.
+gpu = [
+    "jax[cuda12]>=0.10",
+    "jaxlib>=0.10",
+    "jax-cuda12-plugin>=0.10",
+]
 aqc = ["qiskit-addon-aqc-tensor", "quimb", "qiskit-quimb"]
 test = [
     "pytest>=7.0",
