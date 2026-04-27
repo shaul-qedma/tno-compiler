@@ -18,9 +18,37 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 import time
 from pathlib import Path
+
+
+def _assert_jax_backend() -> None:
+    """Print backend + devices, and hard-fail if `JAX_PLATFORMS` was set
+    to something we couldn't actually load. JAX's default behavior is
+    to fall back silently to CPU when a requested platform is missing —
+    that's the worst kind of bug for a perf benchmark.
+    """
+    import jax
+    requested = os.environ.get("JAX_PLATFORMS")
+    actual = jax.default_backend()
+    devices = jax.devices()
+    print(
+        f"[jax] requested={requested!r}  actual={actual!r}  "
+        f"devices={devices}  jax={jax.__version__}",
+        flush=True,
+    )
+    if requested and requested != "" and requested.lower() != actual.lower():
+        # JAX reports 'gpu' for cuda; treat them as equivalent.
+        equiv = {"cuda": "gpu", "gpu": "cuda"}
+        if equiv.get(requested.lower()) != actual.lower():
+            raise RuntimeError(
+                f"JAX_PLATFORMS={requested!r} but jax.default_backend() "
+                f"resolved to {actual!r}. Backend probably failed to load "
+                f"silently — check `uv pip list | grep jax` for version "
+                f"mismatch between jaxlib and jax-cuda12-plugin."
+            )
 
 # Reuse loader/inliner from gpu_perf_compare.py.
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -45,6 +73,8 @@ def main() -> None:
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--out", default="notebook_batched_segments.json")
     args = ap.parse_args()
+
+    _assert_jax_backend()
 
     qasm_path = (Path(args.qasm) if args.qasm
                  else _NOTEBOOK_DIR / f"circ_qasm2_qiskit_steps{args.steps}.qasm")
