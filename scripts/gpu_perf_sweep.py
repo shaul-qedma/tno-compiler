@@ -63,8 +63,10 @@ def _row_for(method: str, target: str, qc, depth: int,
 
 def main() -> None:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--tfi-n", type=int, nargs="+", default=[10, 14, 20])
-    ap.add_argument("--tfi-steps", type=int, nargs="+", default=[4, 8])
+    ap.add_argument("--tfi-n", type=int, nargs="*", default=[10, 14, 20],
+                    help="TFI qubit counts. Pass `--tfi-n` (no args) to skip TFI.")
+    ap.add_argument("--tfi-steps", type=int, nargs="*", default=[4, 8],
+                    help="TFI Trotter step counts. Pass `--tfi-steps` (no args) to skip TFI.")
     ap.add_argument(
         "--notebook-steps", type=int, nargs="+", default=[],
         help="Sweep notebook_stepsN targets (bundled in data/notebook/). "
