@@ -38,7 +38,8 @@ from __future__ import annotations
 import numpy as np
 import quimb.tensor as qtn
 
-from .brickwall import brickwall_ansatz_gates, gates_to_circuit
+from .brickwall import brickwall_ansatz_gates, gates_to_circuit, random_brickwall
+from .compiler import _gates_for_depth, _qc_to_gate_tensors_local, _warm_start_init
 from .gradient import compute_cost_and_grad
 from .optim import polar_sweeps, riemannian_adam
 
@@ -312,3 +313,145 @@ def _compute_state_overlap(
     psi_v = circ.psi
     psi_target = _arrays_to_quimb_mps(target_state_mps)
     return complex((psi_target.H & psi_v) ^ ...)
+
+
+# -----------------------------------------------------------------------------
+# Optimal-depth state-prep compile (binary search + warm start, batched)
+# -----------------------------------------------------------------------------
+
+
+def compile_state_optimal(
+    target_circuit, threshold, *,
+    target_state_mps=None, initial_state_mps=None,
+    state_max_bond=64, state_cutoff=1e-10,
+    lo=1, hi=24, n_seeds=3, max_iter=100,
+    max_bond=64, first_odd=True, seed=0, warm_start=True,
+):
+    """Binary-search the smallest brickwall depth `D*` such that the best
+    of `n_seeds` polar compiles at `D*` reaches state-infidelity ≤ `threshold`.
+
+    State-infidelity = ``1 - |⟨ψ_target | V | φ_initial⟩|²``. Default
+    initial = |0⟩ (specify `initial_state_mps` for non-trivial).
+
+    Same warm-start + batched-polar machinery as `compile_circuit_optimal`,
+    just with state-prep cost (compile_state's rank-1 MPO embedding under
+    the hood) and state-fidelity threshold.
+
+    Returns:
+        (D_opt, compiled, info, search) where:
+          D_opt: smallest depth in [lo, hi] meeting threshold (or None)
+          compiled: best compiled QuantumCircuit at chosen depth
+          info: dict with state_overlap, state_infidelity, gate_tensors,
+              best_seed_idx, depth, cost_history.
+          search: depth → list of {seed_idx, is_warm_start, state_infidelity}
+    """
+    n_qubits = target_circuit.num_qubits
+
+    # Build target state MPS once.
+    if target_state_mps is None:
+        target_state_mps, target_bond = circuit_to_state_mps_arrays(
+            target_circuit, max_bond=state_max_bond, cutoff=state_cutoff,
+        )
+    else:
+        target_bond = max(a.shape[0] for a in target_state_mps[1:])
+
+    # Build the rank-1 MPO target arrays (handles initial=None or MPS).
+    target_arrays_mpo = state_mps_to_target_arrays_general(
+        target_state_mps, initial_state_mps,
+    )
+
+    search: dict[int, dict] = {}
+    best_so_far: dict[int, list] = {}
+
+    def _make_warm_start(d: int):
+        if not warm_start or not best_so_far:
+            return None
+        closest = min(best_so_far.keys(), key=lambda x: abs(x - d))
+        return _warm_start_init(
+            closest, best_so_far[closest], d, n_qubits, first_odd,
+        )
+
+    def probe(d: int):
+        if d in search:
+            return search[d]
+        init_gates_list = []
+        ws = _make_warm_start(d)
+        if ws is not None:
+            init_gates_list.append(ws)
+        haar_needed = n_seeds - len(init_gates_list)
+        for s in range(haar_needed):
+            init_gates_list.append(_qc_to_gate_tensors_local(
+                random_brickwall(n_qubits, d, first_odd=first_odd,
+                                 seed=seed + 1000 * d + s)))
+        # ONE batched polar over all seeds.
+        opt_gates_list, hist_list = polar_sweeps(
+            init_gates_list, max_iter=max_iter,
+            target_arrays=target_arrays_mpo, n_qubits=n_qubits,
+            n_layers=d, max_bond=max_bond, first_odd=first_odd,
+            seed=seed + d,
+        )
+        # Compute state-infidelity per member.
+        ansatz_struct = brickwall_ansatz_gates(n_qubits, d, first_odd)
+        per_seed = []
+        for s, gates in enumerate(opt_gates_list):
+            ov = _compute_state_overlap(
+                gates, ansatz_struct, target_state_mps, initial_state_mps,
+            )
+            per_seed.append({
+                'seed_idx': s,
+                'is_warm_start': (s == 0 and ws is not None),
+                'state_infidelity': 1.0 - float(abs(ov) ** 2),
+                'overlap_abs': float(abs(ov)),
+            })
+        record = {
+            'depth': d,
+            'gate_lists': opt_gates_list,
+            'histories': hist_list,
+            'per_seed': per_seed,
+        }
+        search[d] = record
+        best_idx = min(range(len(per_seed)),
+                       key=lambda s: per_seed[s]['state_infidelity'])
+        best_so_far[d] = opt_gates_list[best_idx]
+        return record
+
+    optimal = None
+    while lo <= hi:
+        mid = (lo + hi) // 2
+        rec = probe(mid)
+        best_inf = min(r['state_infidelity'] for r in rec['per_seed'])
+        if best_inf <= threshold:
+            optimal = mid
+            hi = mid - 1
+        else:
+            lo = mid + 1
+
+    chosen = (optimal if optimal is not None
+              else min(search,
+                       key=lambda d: min(r['state_infidelity']
+                                         for r in search[d]['per_seed'])))
+    rec = search[chosen]
+    best_idx = min(range(len(rec['per_seed'])),
+                   key=lambda s: rec['per_seed'][s]['state_infidelity'])
+    best_gates = rec['gate_lists'][best_idx]
+    best_hist = rec['histories'][best_idx]
+    ov = _compute_state_overlap(
+        best_gates, brickwall_ansatz_gates(n_qubits, chosen, first_odd),
+        target_state_mps, initial_state_mps,
+    )
+    compiled = gates_to_circuit(
+        best_gates, n_qubits,
+        brickwall_ansatz_gates(n_qubits, chosen, first_odd),
+    )
+    info = {
+        'state_overlap': complex(ov),
+        'state_infidelity': 1.0 - float(abs(ov) ** 2),
+        'overlap_abs': float(abs(ov)),
+        'gate_tensors': best_gates,
+        'best_seed_idx': int(best_idx),
+        'depth': chosen,
+        'target_state_bond': int(target_bond),
+        'cost_history': best_hist,
+    }
+    search_summary = {d: r['per_seed'] for d, r in sorted(search.items())}
+    return optimal, compiled, info, search_summary
