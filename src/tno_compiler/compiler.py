@@ -14,11 +14,21 @@ import numpy as np
 
 from .brickwall import (
     brickwall_ansatz_gates, circuit_to_quimb_tn, gates_to_circuit,
+    random_brickwall,
 )
 from .compress import tn_to_mpo
 from .gradient import compute_cost_and_grad
 from .mpo_ops import mpo_to_arrays
 from .optim import polar_sweeps, riemannian_adam
+
+
+def _qc_to_gate_tensors_local(qc):
+    tensors = []
+    for instruction in qc.data:
+        mat = np.asarray(instruction.operation.to_matrix())
+        if mat.shape == (4, 4):
+            tensors.append(mat.reshape(2, 2, 2, 2))
+    return tensors
 
 
 def build_target_arrays(target, max_bond=256, tol=1e-2):
@@ -47,7 +57,7 @@ def compile_circuit(target, ansatz_depth, tol=1e-2,
                      max_bond=256, max_iter=500, lr=1e-3,
                      method="polar", first_odd=True,
                      init_gates=None, callback=None,
-                     drop_rate=0.0, seed=0):
+                     drop_rate=0.0, drop_rate_schedule=None, seed=0):
     """Compile `target` to a brickwall of depth `ansatz_depth`.
 
     Args:
@@ -67,6 +77,8 @@ def compile_circuit(target, ansatz_depth, tol=1e-2,
         callback: optional callable(step, cost) for progress reporting.
         drop_rate: per-gate polar-sweep dropout probability (0 disables).
             Polar method only.
+        drop_rate_schedule: optional sweep-wise dropout schedule for the
+            polar method. Supported kinds: `linear`, `cosine`, `constant`.
         seed: master RNG seed; drives dropout (init randomness is the
             caller's responsibility via `init_gates`).
 
@@ -94,7 +106,8 @@ def compile_circuit(target, ansatz_depth, tol=1e-2,
             target_arrays=target_arrays, n_qubits=n_qubits,
             n_layers=ansatz_depth, max_bond=actual_bond,
             first_odd=first_odd,
-            drop_rate=drop_rate, seed=seed)
+            drop_rate=drop_rate, drop_rate_schedule=drop_rate_schedule,
+            seed=seed)
         opt_gates = opt_gates_list[0]
         cost_history = hist_list[0]
     elif method == "adam":
@@ -116,3 +129,76 @@ def compile_circuit(target, ansatz_depth, tol=1e-2,
         'compile_error': cost_history[-1] if cost_history else float('inf'),
         'gate_tensors': opt_gates,
     }
+
+
+def compile_circuit_optimal(target, threshold, *, lo=1, hi=24, n_seeds=3,
+                              tol=1e-2, max_bond=256, max_iter=200, lr=1e-3,
+                              method="polar", first_odd=True, drop_rate=0.0,
+                              seed=0):
+    """Binary-search the smallest brickwall depth `D*` such that
+    ``compile_circuit(target, D*)`` reaches ``compile_error <= threshold``.
+
+    Per probe runs `n_seeds` independent Haar-init compiles and takes the
+    one with the lowest Frobenius error — this gives the strongest claim
+    that "depth D can achieve `threshold`". Each compile uses the
+    underlying `compile_circuit` (polar sweeps by default).
+
+    Args:
+        target: qiskit QuantumCircuit defining V.
+        threshold: target Frobenius `compile_error`. The "optimal" D is
+            the smallest in [lo, hi] whose best run is ≤ threshold.
+        lo, hi: search bounds on brickwall depth.
+        n_seeds: number of independent Haar init runs per probe.
+        Other args: forwarded to `compile_circuit`.
+
+    Returns:
+        (D_opt, compiled, info, search) where:
+          D_opt: optimal depth (int) or None if no D in [lo, hi] meets threshold
+          compiled, info: best `compile_circuit` result at D_opt (or at the
+              best probed depth if D_opt is None)
+          search: dict mapping each probed depth → list of per-seed results.
+    """
+    n_qubits = target.num_qubits
+    search: dict[int, list[dict]] = {}
+
+    def best_at(d: int) -> dict:
+        if d in search:
+            return min(search[d], key=lambda r: r['compile_error'])
+        runs = []
+        for s in range(n_seeds):
+            init = _qc_to_gate_tensors_local(
+                random_brickwall(n_qubits, d, first_odd=first_odd,
+                                 seed=seed + 1000 * d + s))
+            compiled, info = compile_circuit(
+                target, d, tol=tol, max_bond=max_bond, max_iter=max_iter,
+                lr=lr, method=method, first_odd=first_odd,
+                init_gates=init, drop_rate=drop_rate, seed=seed + d * n_seeds + s)
+            runs.append({
+                'seed_idx': s,
+                'compile_error': float(info['compile_error']),
+                'compress_error': float(info['compress_error']),
+                'compiled': compiled,
+                'info': info,
+            })
+        search[d] = runs
+        return min(runs, key=lambda r: r['compile_error'])
+
+    optimal = None
+    while lo <= hi:
+        mid = (lo + hi) // 2
+        b = best_at(mid)
+        if b['compile_error'] <= threshold:
+            optimal = mid
+            hi = mid - 1
+        else:
+            lo = mid + 1
+
+    chosen = optimal if optimal is not None else min(
+        search, key=lambda d: min(r['compile_error'] for r in search[d]))
+    chosen_best = best_at(chosen)
+    search_summary = {
+        d: [{k: v for k, v in r.items() if k not in ('compiled', 'info')}
+            for r in runs]
+        for d, runs in sorted(search.items())
+    }
+    return optimal, chosen_best['compiled'], chosen_best['info'], search_summary
