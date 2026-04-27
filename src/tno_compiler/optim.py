@@ -24,6 +24,7 @@ import numpy as np
 def polar_sweeps(gates_init_list, max_iter=100, callback=None,
                   target_arrays=None, n_qubits=None, n_layers=None,
                   max_bond=128, first_odd=True,
+                  drop_rate=0.0,
                   seed=0, repel_lambda=0.0):
     """Batched polar sweeps: optimize B ensemble members in parallel.
 
@@ -65,13 +66,14 @@ def polar_sweeps(gates_init_list, max_iter=100, callback=None,
     target_jax = [jnp.broadcast_to(jnp.asarray(a), (B,) + a.shape)
                    for a in target_arrays]
 
+    rng = np.random.default_rng(seed) if drop_rate > 0.0 else None
     per_iter_costs = []  # (B,) array per iter
 
     for t in range(1, max_iter + 1):
         cost = polar_sweep_batched(
             target_jax, gates, n_qubits, n_layers,
             max_bond, first_odd,
-            drop_rate=0.0, rng=None,
+            drop_rate=drop_rate, rng=rng,
             repel_lambda=repel_lambda,
         )
         per_iter_costs.append(np.asarray(cost))

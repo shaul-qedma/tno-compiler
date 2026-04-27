@@ -185,6 +185,7 @@ def compile_state(
     first_odd=True,
     init_gates=None,
     callback=None,
+    drop_rate=0.0,
     seed=0,
     lr=1e-3,
 ):
@@ -245,6 +246,7 @@ def compile_state(
             n_layers=ansatz_depth,
             max_bond=max_bond,
             first_odd=first_odd,
+            drop_rate=drop_rate,
             seed=seed,
         )
         opt_gates = opt_gates_list[0]
@@ -324,7 +326,7 @@ def compile_state_optimal(
     state_max_bond=64, state_cutoff=1e-10,
     lo=1, hi=24, n_seeds=3, max_iter=100,
     max_bond=64, first_odd=True, seed=0, warm_start=True,
-    init_perturb_scale=0.1,
+    init_perturb_scale=0.1, drop_rate=0.0,
 ):
     """Binary-search the smallest brickwall depth `D*` such that the best
     of `n_seeds` polar compiles at `D*` reaches state-infidelity ≤ `threshold`.
@@ -388,7 +390,7 @@ def compile_state_optimal(
             init_gates_list, max_iter=max_iter,
             target_arrays=target_arrays_mpo, n_qubits=n_qubits,
             n_layers=d, max_bond=max_bond, first_odd=first_odd,
-            seed=seed + d,
+            drop_rate=drop_rate, seed=seed + d,
         )
         # Compute state-infidelity per member.
         ansatz_struct = brickwall_ansatz_gates(n_qubits, d, first_odd)

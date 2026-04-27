@@ -24,6 +24,7 @@ from .optim import polar_sweeps
 def compile_ensemble(target, ansatz_depth, n_circuits=5,
                       tol=1e-2, max_bond=256,
                       max_iter=200, lr=2e-2, first_odd=True, seed=0,
+                      drop_rate=0.0,
                       repel_lambda=0.0, top_k=None, n_pairs=0,
                       perturb_scale=0.1):
     """Compile a weighted ensemble of brickwall circuits approximating V.
@@ -86,6 +87,7 @@ def compile_ensemble(target, ansatz_depth, n_circuits=5,
         init_gates_list, max_iter=max_iter,
         target_arrays=target_arrays, n_qubits=n, n_layers=ansatz_depth,
         max_bond=actual_bond, first_odd=first_odd,
+        drop_rate=drop_rate,
         seed=seed, repel_lambda=repel_lambda)
 
     ansatz = brickwall_ansatz_gates(n, ansatz_depth, first_odd)
@@ -165,6 +167,7 @@ def compile_ensemble_optimal(
     search_tol=None, search_max_bond=None,
     tol=1e-2, max_bond=256, max_iter=200, lr=2e-2,
     first_odd=True, seed=0,
+    drop_rate=0.0,
     repel_lambda=0.0, top_k=None, n_pairs=0, perturb_scale=0.1,
 ):
     """Two-stage compile: cheap-search the smallest depth meeting a
@@ -238,6 +241,7 @@ def compile_ensemble_optimal(
         target, ansatz_depth=chosen, n_circuits=n_circuits,
         tol=tol, max_bond=max_bond, max_iter=max_iter, lr=lr,
         first_odd=first_odd, seed=seed,
+        drop_rate=drop_rate,
         repel_lambda=repel_lambda, top_k=top_k, n_pairs=n_pairs,
         perturb_scale=perturb_scale,
     )

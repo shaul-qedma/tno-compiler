@@ -75,7 +75,8 @@ def build_target_arrays(target, max_bond=256, tol=1e-2):
 def compile_circuit(target, ansatz_depth, tol=1e-2,
                      max_bond=256, max_iter=500, lr=1e-3,
                      method="polar", first_odd=True,
-                     init_gates=None, callback=None, seed=0):
+                     init_gates=None, callback=None,
+                     drop_rate=0.0, seed=0):
     """Compile `target` to a brickwall of depth `ansatz_depth`.
 
     Args:
@@ -119,7 +120,7 @@ def compile_circuit(target, ansatz_depth, tol=1e-2,
             [init_gates], max_iter=max_iter, callback=callback,
             target_arrays=target_arrays, n_qubits=n_qubits,
             n_layers=ansatz_depth, max_bond=actual_bond,
-            first_odd=first_odd, seed=seed)
+            first_odd=first_odd, drop_rate=drop_rate, seed=seed)
         opt_gates = opt_gates_list[0]
         cost_history = hist_list[0]
     elif method == "adam":
@@ -172,7 +173,7 @@ def _warm_start_init(prev_depth: int, prev_gates: list, target_depth: int,
 def compile_circuit_optimal(target, threshold, *, lo=1, hi=24, n_seeds=3,
                               tol=1e-2, max_bond=256, max_iter=200,
                               first_odd=True, seed=0, warm_start=True,
-                              init_perturb_scale=0.1):
+                              init_perturb_scale=0.1, drop_rate=0.0):
     """Binary-search the smallest brickwall depth `D*` such that the best
     of `n_seeds` polar compiles at depth `D*` reaches Frobenius
     ``compile_error <= threshold``.
@@ -228,7 +229,7 @@ def compile_circuit_optimal(target, threshold, *, lo=1, hi=24, n_seeds=3,
             init_gates_list, max_iter=max_iter,
             target_arrays=target_arrays, n_qubits=n_qubits,
             n_layers=d, max_bond=actual_bond, first_odd=first_odd,
-            seed=seed + d)
+            drop_rate=drop_rate, seed=seed + d)
         per_seed = []
         for s, hist in enumerate(hist_list):
             per_seed.append({

@@ -1,12 +1,16 @@
-"""Optimal brickwall depth vs Frobenius tolerance, sweep across (n, d_target).
+"""Optimal brickwall depth vs Frobenius tolerance, sweep across (n, steps).
 
-For each (n_qubits, target_depth) and each tolerance ε in `tolerances`,
+For each (n_qubits, steps) and each tolerance ε in `tolerances`,
 binary-search the smallest brickwall depth `D*` whose best-of-`n_seeds`
 polar compile reaches Frobenius compile_error ≤ ε.
 
-Targets are Haar-random brickwalls (n_qubits, target_depth, first_odd=True).
+Targets are TFI Trotter circuits (`tfi_trotter_circuit`) — physically
+meaningful, structured, and Trotter-compressible. NOT Haar-random
+brickwalls (those have no compressible structure beyond their depth).
 
-Output: JSON with `{(n, d_target, tol)}` → D*, plus a PNG plot.
+Default TFI: J=1, g=1, h=0, dt=0.1.
+
+Output: JSON with `{(n, steps, tol)}` → D*, plus a PNG plot.
 
 Usage:
   uv run python scripts/optimal_depth_vs_tol.py
@@ -22,21 +26,27 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import numpy as np
 
-from tno_compiler.brickwall import random_brickwall
 from tno_compiler.compiler import compile_circuit_optimal
+from tno_compiler.tfi import tfi_trotter_circuit
 
 
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--n-qubits", type=int, nargs="+", default=[10, 12, 14])
-    ap.add_argument("--target-depths", type=int, nargs="+", default=[8, 16])
+    ap.add_argument("--steps", type=int, nargs="+", default=[4, 8, 16],
+                    help="number of TFI Trotter steps in the target")
     ap.add_argument(
         "--tolerances", type=float, nargs="+",
-        default=[1e-1, 5e-2, 1e-2, 5e-3, 1e-3, 5e-4, 1e-4],
+        default=[5e-3, 1e-3, 5e-4, 1e-4],
+        help="Frobenius targets, processed loose→tight to warm-start hi.",
     )
+    ap.add_argument("--J", type=float, default=1.0)
+    ap.add_argument("--g", type=float, default=1.0)
+    ap.add_argument("--h", type=float, default=0.0)
+    ap.add_argument("--dt", type=float, default=0.1)
     ap.add_argument("--lo", type=int, default=1)
     ap.add_argument("--hi", type=int, default=32)
-    ap.add_argument("--n-seeds", type=int, default=3)
+    ap.add_argument("--n-seeds", type=int, default=8)
     ap.add_argument("--max-iter", type=int, default=200)
     ap.add_argument("--mpo-tol", type=float, default=1e-4,
                     help="MPO compression tolerance (must be << min compile tol)")
@@ -50,13 +60,16 @@ def main() -> None:
     sorted_tols = sorted(args.tolerances, reverse=True)  # loose → tight (warm-start hi)
 
     for n in args.n_qubits:
-        for d_t in args.target_depths:
-            target = random_brickwall(
-                n, d_t, first_odd=True, seed=args.target_seed,
+        for steps in args.steps:
+            target = tfi_trotter_circuit(
+                n, args.J, args.g, args.h, args.dt, steps, order=1,
+            )
+            target_depth = target.depth(
+                filter_function=lambda ci: ci.operation.num_qubits >= 2
             )
             print(
-                f"\n=== n={n}  target_depth={d_t}  "
-                f"(seed={args.target_seed}) ===",
+                f"\n=== n={n}  target depth={target_depth} (= {steps} TFI steps)  "
+                f"[J={args.J}, g={args.g}, h={args.h}, dt={args.dt}] ===",
                 flush=True,
             )
             current_hi = args.hi  # tighten as tolerances tighten
@@ -84,9 +97,21 @@ def main() -> None:
                     f"probes={list(search.keys())}  ({elapsed:.1f}s)",
                     flush=True,
                 )
+                # Per-probe per-seed spread — diversity check.
+                for d_probed, runs in sorted(search.items()):
+                    errs = [r["compile_error"] for r in runs]
+                    e_min, e_max = min(errs), max(errs)
+                    e_mean = sum(errs) / len(errs)
+                    print(
+                        f"      probe d={d_probed:2d}  errs: "
+                        f"min={e_min:.2e} max={e_max:.2e} mean={e_mean:.2e}  "
+                        f"spread={e_max/max(e_min, 1e-30):.1f}×",
+                        flush=True,
+                    )
                 results.append({
                     "n": n,
-                    "d_target": d_t,
+                    "steps": steps,
+                    "target_depth": int(target_depth),
                     "tol": tol,
                     "D_opt": D_opt,
                     "compile_error": float(info["compile_error"]),
@@ -106,19 +131,19 @@ def main() -> None:
 
     # ----- Plot -----
     fig, ax = plt.subplots(figsize=(7, 5))
-    by_config: dict[tuple[int, int], list[tuple[float, int | None]]] = {}
+    by_config: dict[tuple[int, int, int], list[tuple[float, int | None]]] = {}
     for r in results:
-        key = (r["n"], r["d_target"])
+        key = (r["n"], r["target_depth"], r["steps"])
         by_config.setdefault(key, []).append((r["tol"], r["D_opt"]))
 
     cmap = plt.cm.viridis(np.linspace(0, 1, len(by_config)))
-    for color, ((n, d_t), pts) in zip(cmap, sorted(by_config.items())):
+    for color, ((n, td, steps), pts) in zip(cmap, sorted(by_config.items())):
         pts_sorted = sorted(pts)
         xs = [p[0] for p in pts_sorted]
         ys = [p[1] if p[1] is not None else np.nan for p in pts_sorted]
         ax.plot(
             xs, ys, "o-", color=color,
-            label=f"n={n}, target d={d_t}",
+            label=f"n={n}, depth={td} ({steps} TFI steps)",
         )
         # Mark unreachable tols with red x at the top of the plot.
         for tol, d_opt in pts_sorted:
@@ -129,7 +154,8 @@ def main() -> None:
     ax.set_xlabel("Frobenius tolerance ε")
     ax.set_ylabel("Optimal brickwall depth D*")
     ax.set_title(
-        f"compile_circuit_optimal: D* vs ε  (target = random brickwall, "
+        f"compile_circuit_optimal: D* vs ε  "
+        f"(target = TFI Trotter J={args.J} g={args.g} h={args.h} dt={args.dt}, "
         f"n_seeds={args.n_seeds})"
     )
     ax.invert_xaxis()  # left = loose, right = tight (intuitive direction)
