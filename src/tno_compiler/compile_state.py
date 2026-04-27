@@ -106,20 +106,8 @@ def state_mps_to_target_arrays(state_mps_arrays):
     """Embed an MPS |ψ⟩ as the adjoint-reindexed rank-1 MPO arrays for
     |ψ⟩⟨0|, in the layout the polar-sweep engine consumes.
 
-    The engine expects target_arrays = conj(M).reindex(k↔b), see
-    `compiler.build_target_arrays`.
-
-    For M = |ψ⟩⟨0|: M[k, b] = ψ_k · δ_{b, 0}. Then
-        conj(M)[k, b] = conj(ψ_k) · δ_{b, 0}
-    and after the k↔b swap
-        target[k, b] = conj(M)[b, k] = δ_{k, 0} · conj(ψ_b)
-
-    So the output array is nonzero only on the k=0 slice, with
-        out[bl, 0, b, br] = conj(mps[bl, b, br])
-
-    Equivalent identity check (computing Tr(target_arrays·I_phys)):
-    sum_{k=b} out[bl, k, b, br] = out[bl, 0, 0, br] = conj(mps[bl, 0, br]),
-    which is the conjugate of the |0…0⟩-amplitude of |ψ⟩, as it should be.
+    Equivalent to ``state_mps_to_target_arrays_general(state_mps_arrays, None)``
+    but takes the |0⟩-bond-1 fast path (no MPO bond growth).
     """
     out: list[np.ndarray] = []
     for site in state_mps_arrays:
@@ -128,6 +116,49 @@ def state_mps_to_target_arrays(state_mps_arrays):
         # k fixed to 0; b indexes the MPS physical leg (conjugated).
         T[:, 0, :, :] = np.conj(site)
         out.append(T)
+    return out
+
+
+def state_mps_to_target_arrays_general(target_mps_arrays, initial_mps_arrays=None):
+    """Embed |target⟩⟨initial| as adjoint-reindexed rank-1 MPO arrays.
+
+    The engine cost is ``2 - 2·Re Tr(V†·M)/2ⁿ``. With
+    M = |target⟩⟨initial|, this becomes
+        Tr(V†·M) = ⟨initial|V†|target⟩ = ⟨target|V|initial⟩^*
+    so the polar sweep maximizes Re⟨target|V|initial⟩.
+
+    Per-site tensor:
+        T[(bl_t, bl_i), k, b, (br_t, br_i)] =
+            conj(target[bl_t, k, br_t]) · initial[bl_i, b, br_i]
+    so MPO bond per cut = (target bond) × (initial bond).
+
+    If ``initial_mps_arrays is None`` we take |initial⟩ = |0…0⟩ (bond 1)
+    and the bond is unchanged from the target's bond — equivalent to
+    `state_mps_to_target_arrays`.
+    """
+    if initial_mps_arrays is None:
+        return state_mps_to_target_arrays(target_mps_arrays)
+    if len(target_mps_arrays) != len(initial_mps_arrays):
+        raise ValueError(
+            f"target ({len(target_mps_arrays)} sites) and initial "
+            f"({len(initial_mps_arrays)} sites) must agree"
+        )
+    out: list[np.ndarray] = []
+    for t_site, i_site in zip(target_mps_arrays, initial_mps_arrays):
+        bl_t, _, br_t = t_site.shape
+        bl_i, _, br_i = i_site.shape
+        # Per derivation:
+        #   target_arrays[bl, k, b, br] = conj(target[bl_t, b, br_t]) · initial[bl_i, k, br_i]
+        # i.e., k slot ← initial's phys, b slot ← target's phys (conj).
+        # einsum "apc,bqd->abqpcd": a=bl_t, p=target_phys, c=br_t,
+        #                           b=bl_i, q=initial_phys, d=br_i;
+        # output axes (a, b, q, p, c, d) → (bl_t, bl_i, k, b_mpo, br_t, br_i).
+        T = np.einsum(
+            "apc,bqd->abqpcd", np.conj(t_site), i_site,
+            dtype=complex,
+        )
+        T = T.reshape(bl_t * bl_i, 2, 2, br_t * br_i)
+        out.append(T.astype(complex, copy=False))
     return out
 
 
@@ -141,6 +172,7 @@ def compile_state(
     ansatz_depth,
     *,
     target_state_mps=None,
+    initial_state_mps=None,
     state_max_bond=256,
     state_cutoff=1e-10,
     max_bond=256,
@@ -150,6 +182,7 @@ def compile_state(
     init_gates=None,
     callback=None,
     drop_rate=0.0,
+    drop_rate_schedule=None,
     seed=0,
     lr=1e-3,
 ):
@@ -167,8 +200,9 @@ def compile_state(
             For state compression the merged envelopes have bond at most
             (target MPS bond) × (gate ansatz width); set to a value
             comparable to state_max_bond.
-        max_iter, method, first_odd, init_gates, callback, drop_rate, seed,
-            lr: passed through to `polar_sweeps` / `riemannian_adam`.
+        max_iter, method, first_odd, init_gates, callback, drop_rate,
+            drop_rate_schedule, seed, lr: passed through to
+            `polar_sweeps` / `riemannian_adam`.
 
     Returns:
         compiled: QuantumCircuit implementing the brickwall V.
@@ -190,7 +224,9 @@ def compile_state(
     else:
         target_bond = max(a.shape[0] for a in target_state_mps[1:])
 
-    target_arrays = state_mps_to_target_arrays(target_state_mps)
+    target_arrays = state_mps_to_target_arrays_general(
+        target_state_mps, initial_state_mps,
+    )
 
     ansatz = brickwall_ansatz_gates(n_qubits, ansatz_depth, first_odd)
 
@@ -209,6 +245,7 @@ def compile_state(
             max_bond=max_bond,
             first_odd=first_odd,
             drop_rate=drop_rate,
+            drop_rate_schedule=drop_rate_schedule,
             seed=seed,
         )
         opt_gates = opt_gates_list[0]
@@ -225,7 +262,9 @@ def compile_state(
     else:
         raise ValueError(f"Unknown method: {method}. Use 'polar' or 'adam'.")
 
-    overlap = _compute_state_overlap(opt_gates, ansatz, target_state_mps)
+    overlap = _compute_state_overlap(
+        opt_gates, ansatz, target_state_mps, initial_state_mps,
+    )
     state_infidelity = 1.0 - float(abs(overlap) ** 2)
     state_l2_squared = 2.0 - 2.0 * float(overlap.real)
 
@@ -241,15 +280,29 @@ def compile_state(
     return compiled, info
 
 
-def _compute_state_overlap(gate_tensors, ansatz_structure, target_state_mps):
-    """Compute ⟨ψ_target | V | 0⟩ for the optimized brickwall V.
+def _arrays_to_quimb_mps(arrays):
+    """Convert tno-convention 3D 'lpr' arrays (with shape (1, 2, br) /
+    (bl, 2, br) / (bl, 2, 1)) into a quimb MatrixProductState."""
+    quimb_arrays = [arrays[0][0], *arrays[1:-1], arrays[-1][:, :, 0]]
+    return qtn.MatrixProductState(quimb_arrays, shape="lpr")
 
-    Builds V as a quimb circuit acting on |0⟩, then takes the inner
-    product with the target MPS (also a quimb MPS). Both live in
-    tno-compiler's site-ordering convention.
+
+def _compute_state_overlap(
+    gate_tensors, ansatz_structure, target_state_mps,
+    initial_state_mps=None,
+):
+    """Compute ⟨ψ_target | V | φ_initial⟩ for the optimized brickwall V.
+
+    Default initial = |0…0⟩. With an explicit `initial_state_mps`,
+    builds the initial state as a quimb MPS and starts V's circuit
+    from that state.
     """
     n = len(target_state_mps)
-    circ = qtn.CircuitMPS(N=n)
+    if initial_state_mps is None:
+        circ = qtn.CircuitMPS(N=n)
+    else:
+        psi0 = _arrays_to_quimb_mps(initial_state_mps)
+        circ = qtn.CircuitMPS(N=n, psi0=psi0)
     idx = 0
     for _, pairs in ansatz_structure:
         for s1, s2 in pairs:
@@ -257,13 +310,5 @@ def _compute_state_overlap(gate_tensors, ansatz_structure, target_state_mps):
             circ.apply_gate_raw(mat, (s1, s2))
             idx += 1
     psi_v = circ.psi
-
-    # target_state_mps is in 'lpr' order with 3D end sites (1,2,br) / (bl,2,1).
-    # quimb's MatrixProductState wants 2D end sites; squeeze + pass shape.
-    quimb_arrays = [
-        target_state_mps[0][0],
-        *target_state_mps[1:-1],
-        target_state_mps[-1][:, :, 0],
-    ]
-    psi_target = qtn.MatrixProductState(quimb_arrays, shape="lpr")
+    psi_target = _arrays_to_quimb_mps(target_state_mps)
     return complex((psi_target.H & psi_v) ^ ...)

@@ -131,54 +131,85 @@ def compile_circuit(target, ansatz_depth, tol=1e-2,
     }
 
 
+def _gates_for_depth(n_qubits: int, depth: int, first_odd: bool) -> int:
+    odd = first_odd
+    total = 0
+    for _ in range(depth):
+        total += (n_qubits // 2) if odd else ((n_qubits - 1) // 2)
+        odd = not odd
+    return total
+
+
+def _warm_start_init(prev_depth: int, prev_gates: list, target_depth: int,
+                       n_qubits: int, first_odd: bool) -> list:
+    """Build an init for `target_depth` from a previous probe's optimized
+    gates. Pads with identity (target_depth > prev_depth) or truncates
+    (target_depth < prev_depth) at the brickwall layer boundary."""
+    n_target = _gates_for_depth(n_qubits, target_depth, first_odd)
+    if target_depth == prev_depth:
+        return list(prev_gates)
+    if target_depth > prev_depth:
+        identity = np.eye(4, dtype=complex).reshape(2, 2, 2, 2)
+        n_extra = n_target - len(prev_gates)
+        return list(prev_gates) + [identity] * n_extra
+    # target_depth < prev_depth: truncate to first target_depth layers'
+    # worth of gates. Layer counts honor first_odd.
+    return list(prev_gates[:n_target])
+
+
 def compile_circuit_optimal(target, threshold, *, lo=1, hi=24, n_seeds=3,
                               tol=1e-2, max_bond=256, max_iter=200,
-                              first_odd=True, seed=0):
+                              first_odd=True, seed=0, warm_start=True):
     """Binary-search the smallest brickwall depth `D*` such that the best
     of `n_seeds` polar compiles at depth `D*` reaches Frobenius
     ``compile_error <= threshold``.
 
     The n_seeds runs at each probe depth are dispatched as ONE batched
     `polar_sweeps` call (B=n_seeds), so they share the JIT cache and
-    target-MPO build — much faster than n_seeds sequential
-    `compile_circuit` calls.
+    target-MPO build.
 
-    Args:
-        target: qiskit QuantumCircuit defining V.
-        threshold: target Frobenius `compile_error`. The "optimal" D is
-            the smallest in [lo, hi] whose best (min over seeds) run is
-            ≤ threshold.
-        lo, hi: search bounds on brickwall depth.
-        n_seeds: number of independent Haar init runs per probe (batched).
-        Other args: forwarded to the underlying `polar_sweeps` /
-            `build_target_arrays`.
+    With ``warm_start=True`` (default), one of the n_seeds slots at each
+    probe is initialized from the BEST result of the closest previously
+    probed depth (extended with identity layers if going deeper, truncated
+    if going shallower). The other slots stay Haar-random for diversity.
+    This eliminates the random-init lottery that otherwise inflates D*
+    at tight tolerances.
 
     Returns:
-        (D_opt, compiled, info, search) where:
-          D_opt: optimal depth (int) or None if no D in [lo, hi] meets threshold
-          compiled, info: best polar result at D_opt (or at the best
-              probed depth if D_opt is None). info has keys
-              `cost_history`, `compress_error`, `compile_error`, `gate_tensors`.
-          search: dict mapping each probed depth → list of n_seeds
-              {seed_idx, compile_error, compress_error}.
+        (D_opt, compiled, info, search) — see compile_circuit_optimal docs.
     """
     n_qubits = target.num_qubits
     target_arrays, compress_error, actual_bond = build_target_arrays(
         target, max_bond=max_bond, tol=tol)
 
     search: dict[int, dict] = {}  # depth → {seeds, gate_lists, histories}
+    best_so_far: dict[int, list] = {}  # depth → best gates seen at that depth
+
+    def _make_warm_start(d: int):
+        """Return warm-start init derived from the closest previously-best
+        probe, or None if no previous probe."""
+        if not warm_start or not best_so_far:
+            return None
+        closest = min(best_so_far.keys(), key=lambda x: abs(x - d))
+        return _warm_start_init(
+            closest, best_so_far[closest], d, n_qubits, first_odd,
+        )
 
     def probe(d: int):
         if d in search:
             return search[d]
-        # Build n_seeds Haar-random init gate lists.
-        init_gates_list = [
-            _qc_to_gate_tensors_local(
+        # Build init gate lists. Slot 0 may be the warm-start (if available);
+        # remaining slots are Haar-random for diversity.
+        init_gates_list = []
+        ws = _make_warm_start(d)
+        if ws is not None:
+            init_gates_list.append(ws)
+        haar_seeds_needed = n_seeds - len(init_gates_list)
+        for s in range(haar_seeds_needed):
+            init_gates_list.append(_qc_to_gate_tensors_local(
                 random_brickwall(n_qubits, d, first_odd=first_odd,
-                                 seed=seed + 1000 * d + s))
-            for s in range(n_seeds)
-        ]
-        # ONE batched polar call for all n_seeds.
+                                 seed=seed + 1000 * d + s)))
+        # ONE batched polar call for all seeds.
         opt_gates_list, hist_list = polar_sweeps(
             init_gates_list, max_iter=max_iter,
             target_arrays=target_arrays, n_qubits=n_qubits,
@@ -188,6 +219,7 @@ def compile_circuit_optimal(target, threshold, *, lo=1, hi=24, n_seeds=3,
         for s, hist in enumerate(hist_list):
             per_seed.append({
                 'seed_idx': s,
+                'is_warm_start': (s == 0 and ws is not None),
                 'compile_error': float(hist[-1]) if hist else float('inf'),
             })
         record = {
@@ -197,6 +229,10 @@ def compile_circuit_optimal(target, threshold, *, lo=1, hi=24, n_seeds=3,
             'per_seed': per_seed,
         }
         search[d] = record
+        # Cache best gates at this depth for future warm-starts.
+        best_idx = min(range(len(per_seed)),
+                       key=lambda s: per_seed[s]['compile_error'])
+        best_so_far[d] = opt_gates_list[best_idx]
         return record
 
     def best_error(record):
