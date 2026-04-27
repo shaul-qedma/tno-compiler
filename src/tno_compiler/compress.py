@@ -45,7 +45,7 @@ def _compress_bounded(tn, n_sites, max_bond, tol, norm):
     zipup cost is O(n * bond^3), so start at a small bond dimension
     and double until the error is within tolerance or max_bond is reached.
     """
-    bond = 16
+    bond = min(16, max_bond)
     while bond <= max_bond:
         tn_copy = tn.copy()
         mpo = qtn.tensor_network_1d_compress(
