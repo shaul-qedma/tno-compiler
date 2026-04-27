@@ -22,7 +22,8 @@ import numpy as np
 # =============================================================================
 
 def polar_sweeps(gates_init_list, max_iter=100, callback=None,
-                  target_arrays=None, n_qubits=None, n_layers=None,
+                  target_arrays=None, target_arrays_per_member=None,
+                  n_qubits=None, n_layers=None,
                   max_bond=128, first_odd=True,
                   drop_rate=0.0,
                   seed=0, repel_lambda=0.0):
@@ -33,7 +34,16 @@ def polar_sweeps(gates_init_list, max_iter=100, callback=None,
             inner element is a list of (2, 2, 2, 2) gate tensors. For a
             single-circuit compile pass `[gates]` to get B=1.
         target_arrays: unbatched target MPO (list of ndarrays). Gets
-            broadcast to the batch dim internally.
+            broadcast to the batch dim internally. Mutually exclusive
+            with `target_arrays_per_member`.
+        target_arrays_per_member: optional list of B per-member target
+            MPOs (each a list of ndarrays). All members must have the
+            same per-site shape — pad smaller-bond targets with zeros
+            up to a common bond before passing in. Use this to compile
+            K different segments (B = K × n_seeds) in one batched call,
+            sharing JIT cache and per-kernel cusolver launch overhead
+            across segments instead of running them as separate
+            broadcast calls.
         max_bond: MPO bond-dim cap during envelope merging.
         drop_rate: per-gate, per-batch-element probability of skipping
             the polar update on each visit (0 disables). Independent
@@ -63,8 +73,26 @@ def polar_sweeps(gates_init_list, max_iter=100, callback=None,
     gates = [jnp.stack([jnp.asarray(gates_init_list[b][g])
                          for b in range(B)])
              for g in range(n_gates)]
-    target_jax = [jnp.broadcast_to(jnp.asarray(a), (B,) + a.shape)
-                   for a in target_arrays]
+    if target_arrays_per_member is not None:
+        if target_arrays is not None:
+            raise ValueError(
+                "Pass exactly one of `target_arrays` or "
+                "`target_arrays_per_member`."
+            )
+        if len(target_arrays_per_member) != B:
+            raise ValueError(
+                f"target_arrays_per_member length {len(target_arrays_per_member)} "
+                f"does not match B={B} from gates_init_list."
+            )
+        n_sites = len(target_arrays_per_member[0])
+        target_jax = [
+            jnp.stack([jnp.asarray(target_arrays_per_member[b][i])
+                       for b in range(B)])
+            for i in range(n_sites)
+        ]
+    else:
+        target_jax = [jnp.broadcast_to(jnp.asarray(a), (B,) + a.shape)
+                       for a in target_arrays]
 
     rng = np.random.default_rng(seed) if drop_rate > 0.0 else None
     per_iter_costs = []  # (B,) array per iter

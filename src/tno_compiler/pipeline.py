@@ -299,3 +299,151 @@ def _perturb_gates_paired(gate_tensors, scale, rng):
         plus.append((G_mat @ expm(step)).reshape(2, 2, 2, 2))
         minus.append((G_mat @ expm(-step)).reshape(2, 2, 2, 2))
     return plus, minus
+
+
+# ---------------------------------------------------------------------
+# Stacked-batch parallel compile of multiple targets
+# ---------------------------------------------------------------------
+
+
+def _pad_target_arrays_to_uniform_bond(per_target_arrays):
+    """Pad a list of K target_arrays lists so every site has the same
+    (bond_l, k, b, bond_r) shape across targets.
+
+    Each target's arrays have the same n_sites and the same physical
+    dims `(k, b) = (2, 2)` per site, but bond dims may differ. Padding
+    with zeros is safe: zero rows/cols don't contribute to MPO
+    contractions, SVDs, or merges, so all the downstream polar/sweep
+    ops produce identical results to the unpadded compile.
+
+    Returns (padded_per_target, max_shape_per_site).
+    """
+    K = len(per_target_arrays)
+    if K == 0:
+        return [], []
+    n_sites = len(per_target_arrays[0])
+    if any(len(arrs) != n_sites for arrs in per_target_arrays):
+        raise ValueError("all targets must have the same number of MPO sites")
+
+    max_shapes = []
+    for i in range(n_sites):
+        shape = list(per_target_arrays[0][i].shape)
+        for k in range(1, K):
+            for d, sd in enumerate(per_target_arrays[k][i].shape):
+                if sd > shape[d]:
+                    shape[d] = sd
+        max_shapes.append(tuple(shape))
+
+    padded = []
+    for arrs in per_target_arrays:
+        padded_one = []
+        for i, a in enumerate(arrs):
+            target_shape = max_shapes[i]
+            if a.shape == target_shape:
+                padded_one.append(np.asarray(a))
+            else:
+                pad_widths = [(0, ts - cs) for cs, ts in zip(a.shape, target_shape)]
+                padded_one.append(np.pad(np.asarray(a), pad_widths))
+        padded.append(padded_one)
+    return padded, max_shapes
+
+
+def compile_targets_batched(targets, ansatz_depth, n_seeds_per_target=4,
+                              tol=1e-2, max_bond=64, max_iter=100,
+                              first_odd=True, seed=0):
+    """Compile K independent targets together as one batched polar_sweeps
+    call. Total batch size B = K × n_seeds_per_target.
+
+    All targets share the same `(n_qubits, ansatz_depth, max_bond,
+    first_odd)` setup. Per-target target_arrays are padded to a
+    uniform per-site shape (zero-padded — the contractions ignore
+    zero rows/cols), then stacked along the leading B dim. The result
+    is one JIT graph + one cusolver kernel call per op for all K
+    segments at once — much better than K separate calls when each
+    one would be launch-bound at small B.
+
+    Args:
+        targets: list of K qiskit QuantumCircuits, all on the same
+            n_qubits.
+        ansatz_depth: brickwall depth (same for all targets).
+        n_seeds_per_target: number of perturbed-identity inits per target.
+        tol, max_bond: target MPO compression knobs.
+        max_iter: polar sweep iters.
+        seed: master RNG seed.
+
+    Returns:
+        list of K result dicts:
+            {target_idx, n_qubits, gate_tensors, compiled, compile_error,
+             best_seed_idx, all_costs (per-seed)}.
+    """
+    if len(targets) == 0:
+        return []
+
+    n = targets[0].num_qubits
+    if any(t.num_qubits != n for t in targets):
+        raise ValueError("all targets must have the same n_qubits")
+
+    print(
+        f"[batched] {len(targets)} targets × {n_seeds_per_target} seeds "
+        f"= B={len(targets) * n_seeds_per_target}, depth={ansatz_depth}, "
+        f"max_iter={max_iter}",
+        flush=True,
+    )
+
+    per_target_arrays = []
+    compress_errors = []
+    realized_bonds = []
+    for t in targets:
+        arrs, comp_err, bond = build_target_arrays(t, max_bond=max_bond, tol=tol)
+        per_target_arrays.append(arrs)
+        compress_errors.append(comp_err)
+        realized_bonds.append(int(bond))
+    print(
+        f"[batched] target compress: bonds={realized_bonds}  "
+        f"max(err)={max(compress_errors):.2e}",
+        flush=True,
+    )
+
+    padded, max_shapes = _pad_target_arrays_to_uniform_bond(per_target_arrays)
+    common_bond = max(realized_bonds)
+
+    rng = np.random.default_rng(seed)
+    init_gates_list = []
+    target_arrays_per_member = []
+    for k in range(len(targets)):
+        for s in range(n_seeds_per_target):
+            init_gates_list.append(_qc_to_gate_tensors(random_brickwall(
+                n, ansatz_depth, first_odd,
+                seed=int(rng.integers(2**31)))))
+            target_arrays_per_member.append(padded[k])
+
+    opt_gates_list, hist_list = polar_sweeps(
+        init_gates_list, max_iter=max_iter,
+        target_arrays_per_member=target_arrays_per_member,
+        n_qubits=n, n_layers=ansatz_depth,
+        max_bond=common_bond, first_odd=first_odd, seed=seed,
+    )
+
+    ansatz = brickwall_ansatz_gates(n, ansatz_depth, first_odd)
+    results = []
+    for k in range(len(targets)):
+        slot_costs = []
+        slot_gates = []
+        for s in range(n_seeds_per_target):
+            b = k * n_seeds_per_target + s
+            slot_costs.append(float(hist_list[b][-1]) if hist_list[b] else float("inf"))
+            slot_gates.append(opt_gates_list[b])
+        best = int(np.argmin(slot_costs))
+        compiled = gates_to_circuit(slot_gates[best], n, ansatz)
+        results.append({
+            "target_idx": k,
+            "n_qubits": n,
+            "depth": ansatz_depth,
+            "compress_error": float(compress_errors[k]),
+            "compile_error": slot_costs[best],
+            "best_seed_idx": best,
+            "all_costs": slot_costs,
+            "gate_tensors": slot_gates[best],
+            "compiled": compiled,
+        })
+    return results
