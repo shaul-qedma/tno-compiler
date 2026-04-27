@@ -51,10 +51,15 @@ def merge_gate_with_mpo_pair(gate, mpo1, mpo2, gate_is_left=True):
 
 
 def split_merged_tensor(T, canonical='left', max_bond=128):
-    """Split (bl,k1,b1,k2,b2,br) -> T1, T2 with truncated SVD."""
+    """Split (bl,k1,b1,k2,b2,br) -> T1, T2 with truncated SVD.
+
+    Routes to randomized SVD whenever the matrix is meaningfully larger
+    than `max_bond` (target rank). Lower threshold → rSVD covers more
+    of the truncated path, where its k+p<<min(m,n) cost wins on GPU.
+    """
     m_phys = T.shape[0] * T.shape[1] * T.shape[2]
     n_phys = T.shape[3] * T.shape[4] * T.shape[5]
-    if min(m_phys, n_phys) > max_bond * 2:
+    if min(m_phys, n_phys) > max_bond + 16:
         return _split_randomized(T, canonical, max_bond)
     else:
         return _split_full(T, canonical, max_bond)
@@ -98,14 +103,21 @@ def _split_randomized(T, canonical='left', max_bond=128):
 
 
 _RSVD_KEY = jax.random.PRNGKey(42)
-_RSVD_KEY_FOLD = jax.random.fold_in(_RSVD_KEY, 1)
 
 
 def _randomized_svd_impl(mat, k, p=10, q=2):
-    """Halko-Martinsson-Tropp randomized SVD with subspace iteration."""
+    """Halko-Martinsson-Tropp randomized SVD with subspace iteration.
+
+    The sketch key folds in `(m, n, k)`, so different shapes use different
+    Ω. Same-shape calls reuse the same Ω — that's intentional: stable
+    truncations across iters of the same compile, and rSVD doesn't need
+    fresh randomness for accuracy (the Halko bounds depend on `p`/`q`).
+    """
     m, n = mat.shape
-    Omega = (jax.random.normal(_RSVD_KEY, (n, k + p)) +
-             1j * jax.random.normal(_RSVD_KEY_FOLD, (n, k + p)))
+    key_re = jax.random.fold_in(_RSVD_KEY, m * 1009 + n * 31 + k)
+    key_im = jax.random.fold_in(key_re, 1)
+    Omega = (jax.random.normal(key_re, (n, k + p)) +
+             1j * jax.random.normal(key_im, (n, k + p)))
 
     Y = mat @ Omega
     Q, _ = jnp.linalg.qr(Y)
@@ -264,10 +276,15 @@ def canonicalize_tensor_batched(T, left=True):
 
 def split_merged_tensor_batched(T, canonical='left', max_bond=128):
     """Batched split: T has leading batch dim. The branching on
-    matrix size uses T.shape[1:] (unbatched shape)."""
+    matrix size uses T.shape[1:] (unbatched shape).
+
+    Lower threshold than the original `> max_bond * 2` so randomized SVD
+    fires whenever the input matrix has meaningful slack above the target
+    rank — that is the regime where it actually helps.
+    """
     m_phys = T.shape[1] * T.shape[2] * T.shape[3]
     n_phys = T.shape[4] * T.shape[5] * T.shape[6]
-    if min(m_phys, n_phys) > max_bond * 2:
+    if min(m_phys, n_phys) > max_bond + 16:
         return _split_randomized_batched(T, canonical, max_bond)
     else:
         return _split_full_batched(T, canonical, max_bond)
