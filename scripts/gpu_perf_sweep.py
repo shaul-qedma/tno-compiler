@@ -81,6 +81,10 @@ def main() -> None:
     ap.add_argument("--max-bond", type=int, default=64)
     ap.add_argument("--n-seeds", type=int, default=1,
                     help="Batch size for tno (aqc is single-instance)")
+    ap.add_argument("--n-seeds-sweep", type=int, nargs="+", default=None,
+                    help="If set, sweep tno across these batch sizes per "
+                         "(target, depth) — one row per B value. Overrides "
+                         "--n-seeds for tno; aqc still uses --n-seeds.")
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--methods", nargs="+", default=["tno", "aqc"],
                     choices=["tno", "aqc"])
@@ -120,19 +124,22 @@ def main() -> None:
             for depth in args.depths:
                 print(f"\n--- depth={depth} ---", flush=True)
                 if "tno" in args.methods:
-                    try:
-                        t0 = time.time()
-                        r = time_tno(qc, depth, args.iters, args.max_bond,
-                                      args.n_seeds, args.seed)
-                        r["wall_s"] = time.time() - t0
-                    except Exception as e:
-                        r = {"method": "tno",
-                             "error": f"{type(e).__name__}: {str(e)[:300]}"}
-                        print(f"  [tno] FAILED: {r['error']}", flush=True)
-                    full.append({"target": target, "depth": depth, **r})
-                    row = _row_for("tno", target, qc, depth, args.iters, r)
-                    writer.writerow(row); f.flush()
-                    rows.append(row)
+                    seeds_to_try = args.n_seeds_sweep or [args.n_seeds]
+                    for B in seeds_to_try:
+                        try:
+                            t0 = time.time()
+                            r = time_tno(qc, depth, args.iters, args.max_bond,
+                                          B, args.seed)
+                            r["wall_s"] = time.time() - t0
+                        except Exception as e:
+                            r = {"method": "tno", "n_seeds": B,
+                                 "error": f"{type(e).__name__}: {str(e)[:300]}"}
+                            print(f"  [tno B={B}] FAILED: {r['error']}",
+                                  flush=True)
+                        full.append({"target": target, "depth": depth, **r})
+                        row = _row_for("tno", target, qc, depth, args.iters, r)
+                        writer.writerow(row); f.flush()
+                        rows.append(row)
 
                 if "aqc" in args.methods:
                     try:
