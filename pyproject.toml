@@ -5,28 +5,30 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "tno-compiler"
 version = "0.1.0"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 dependencies = [
     "bqskit>=1.2.1",
-    "jax>=0.4.20",
+    # Base jax pinned to the same minor as the gpu extra so adding
+    # `--extra gpu` doesn't trigger a resolver conflict.
+    "jax>=0.10",
     "scipy>=1.11",
+    "qiskit>=1.0",
+    "quimb",
+    "qiskit-quimb",
+    "qiskit-addon-aqc-tensor",
+    "cvxpy>=1.4",
+    "pytest>=7.0",
+    "hypothesis>=6.0",
 ]
 
 [project.optional-dependencies]
-cpu = ["jax[cpu]>=0.4.20"]
-# Pin gpu trio to the same minor so jax-cuda12-plugin matches jaxlib.
-# Plugin 0.10.0 against jaxlib 0.9.x silently disables the GPU backend.
+# Cuda stack only — `uv sync --extra gpu`. Pin jax + jaxlib + cuda
+# plugin to the same minor; a 0.10 plugin against 0.9 jaxlib silently
+# disables the GPU backend.
 gpu = [
     "jax[cuda12]>=0.10",
     "jaxlib>=0.10",
     "jax-cuda12-plugin>=0.10",
-]
-aqc = ["qiskit-addon-aqc-tensor", "quimb", "qiskit-quimb"]
-test = [
-    "pytest>=7.0",
-    "hypothesis>=6.0",
-    "qiskit>=1.0",
-    "cvxpy>=1.4",
 ]
 
 [tool.setuptools.packages.find]

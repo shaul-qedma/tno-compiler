@@ -188,13 +188,67 @@ def gate_env_for_polar(L, A1, A2, B1, B2, R):
     return jnp.einsum('ab,acde,efgh,bick,kjfl,hl->dgij',
                        L, A1, A2, B1, B2, R, optimize=True)
 
+_POLAR_NEWTON_ITER = 7
+
+
+@jax.jit
+def _polar_newton_4x4(M):
+    """Polar factor of 4×4 M via Newton iteration with closed-form 4×4 inverse.
+
+    Iteration:  X_{k+1} = 0.5 · (X_k + (X_k^H)^{-1})
+    Quadratically convergent for nonsingular M; ~5 iters reach machine eps
+    for moderately conditioned env. The matmul + jnp.linalg.inv pattern
+    fuses with the surrounding sweep ops in XLA, which is the launch-bound
+    win on GPU vs the opaque `jnp.linalg.svd` polar (one cusolver call
+    per update that doesn't fuse with anything).
+
+    Followed by one cubic Newton-Schulz polish step (pure matmul) to
+    clean any residual non-unitarity.
+
+    Selected via env var `TNO_POLAR_METHOD=newton`. Default is `svd`
+    because Newton diverges on near-singular env (early in compile when
+    init gates are random and target is identity); SVD is unconditionally
+    robust. Use `newton` once you've confirmed env is well-conditioned
+    in your workload.
+    """
+    norm = jnp.sqrt(jnp.sum(jnp.real(M.conj() * M)) + 1e-30)
+    X = M / jnp.sqrt(norm)
+    for _ in range(_POLAR_NEWTON_ITER):
+        Xh_inv = jnp.linalg.inv(X.conj().T)
+        X = 0.5 * (X + Xh_inv)
+    XH_X = X.conj().T @ X
+    X = X @ (1.5 * jnp.eye(4, dtype=M.dtype) - 0.5 * XH_X)
+    return X
+
+
+@jax.jit
+def _polar_svd_4x4(M):
+    """Polar factor via SVD — unconditionally robust, default."""
+    u, _, vh = jnp.linalg.svd(M, full_matrices=False)
+    return u @ vh
+
+
+def _select_polar():
+    """Pick the polar implementation once at import based on env var."""
+    import os
+    method = os.environ.get("TNO_POLAR_METHOD", "svd").lower()
+    if method == "svd":
+        return _polar_svd_4x4
+    if method == "newton":
+        return _polar_newton_4x4
+    raise ValueError(
+        f"TNO_POLAR_METHOD must be 'svd' or 'newton', got {method!r}")
+
+
+_polar_4x4 = _select_polar()
+
+
 @jax.jit
 def env_and_polar_update(L, A1, A2, B1, B2, R):
     """Fused: compute environment + polar decomposition update."""
     env = jnp.einsum('ab,acde,efgh,bick,kjfl,hl->dgij',
                       L, A1, A2, B1, B2, R, optimize=True)
-    u, _, vh = jnp.linalg.svd(env.conj().reshape(4, 4), full_matrices=False)
-    return (u @ vh).reshape(2, 2, 2, 2)
+    return _polar_4x4(env.conj().reshape(4, 4)).reshape(2, 2, 2, 2)
 
 
 @jax.jit
@@ -205,8 +259,7 @@ def polar_from_env(env):
     the env between its computation and the polar step — used by the
     diversity-regularized batched sweep.
     """
-    u, _, vh = jnp.linalg.svd(env.conj().reshape(4, 4), full_matrices=False)
-    return (u @ vh).reshape(2, 2, 2, 2)
+    return _polar_4x4(env.conj().reshape(4, 4)).reshape(2, 2, 2, 2)
 
 
 # --- Absorb / init helpers ---
