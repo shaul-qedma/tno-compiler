@@ -54,7 +54,7 @@ def polar_sweeps(gates_init_list, max_iter=100, callback=None,
         opt_gates_list: list of B optimized gate lists (numpy arrays).
         history_per_member: list of B per-iteration cost histories.
     """
-    from .gradient import polar_sweep_batched
+    from .gradient import polar_sweep_batched, polar_sweep_step_jit
 
     B = len(gates_init_list)
     n_gates = len(gates_init_list[0])
@@ -69,13 +69,25 @@ def polar_sweeps(gates_init_list, max_iter=100, callback=None,
     rng = np.random.default_rng(seed) if drop_rate > 0.0 else None
     per_iter_costs = []  # (B,) array per iter
 
+    # Fast path: no dropout / no repulsion → fuse the whole sweep into one
+    # JIT graph per (n_qubits, n_layers, max_bond) shape. Avoids the
+    # per-iter Python dispatch overhead that dominates on GPU at B=1.
+    use_jit = (drop_rate == 0.0) and (repel_lambda == 0.0)
+
     for t in range(1, max_iter + 1):
-        cost = polar_sweep_batched(
-            target_jax, gates, n_qubits, n_layers,
-            max_bond, first_odd,
-            drop_rate=drop_rate, rng=rng,
-            repel_lambda=repel_lambda,
-        )
+        if use_jit:
+            gates_t, cost = polar_sweep_step_jit(
+                tuple(target_jax), tuple(gates), n_qubits, n_layers,
+                max_bond=max_bond, first_odd=first_odd,
+            )
+            gates = list(gates_t)
+        else:
+            cost = polar_sweep_batched(
+                target_jax, gates, n_qubits, n_layers,
+                max_bond, first_odd,
+                drop_rate=drop_rate, rng=rng,
+                repel_lambda=repel_lambda,
+            )
         per_iter_costs.append(np.asarray(cost))
         if callback:
             callback(t, per_iter_costs[-1])

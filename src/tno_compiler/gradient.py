@@ -23,6 +23,9 @@ All hot-path tensor ops are JAX JIT-compiled; see jax_ops.py for the
 kernels and their vmap'd siblings.
 """
 
+from functools import partial
+
+import jax
 import jax.numpy as jnp
 import numpy as np
 
@@ -394,6 +397,34 @@ def polar_sweep_batched(target_arrays_batched, gates, n_qubits, n_layers,
     _flatten_into(gate_layers, gates)
     return _compute_cost_batched(target_arrays_batched, gates, n_qubits,
                                   n_layers, max_bond, first_odd)
+
+
+@partial(jax.jit, static_argnames=(
+    'n_qubits', 'n_layers', 'max_bond', 'first_odd', 'n_inner'))
+def polar_sweep_step_jit(target_arrays_batched, gates, n_qubits, n_layers,
+                          max_bond=128, first_odd=True, n_inner=3):
+    """Jitted single polar-sweep iter. Returns `(updated_gates, cost)`.
+
+    Same semantics as `polar_sweep_batched` with `drop_rate=0` and
+    `repel_lambda=0`, but the entire down+up sweep — every layer merge,
+    every gate polar update — fuses into one XLA graph. On GPU this
+    eliminates the per-kernel launch overhead that dominates at small
+    bond / B=1.
+
+    The Python list `gates` is mutated at trace time; we return it so
+    the updated tracers escape jit boundaries.
+
+    Pytree note: `target_arrays_batched` and `gates` are tuples of
+    arrays; the wrapper in `polar_sweeps` converts list ↔ tuple.
+    """
+    gates = list(gates)
+    target_arrays_batched = list(target_arrays_batched)
+    cost = polar_sweep_batched(
+        target_arrays_batched, gates, n_qubits, n_layers,
+        max_bond=max_bond, first_odd=first_odd, n_inner=n_inner,
+        drop_rate=0.0, rng=None, repel_lambda=0.0,
+    )
+    return tuple(gates), cost
 
 
 # ---------------------------------------------------------------------
