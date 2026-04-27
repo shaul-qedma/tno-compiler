@@ -8,6 +8,7 @@ U(V†U) overlap Gram matrix, and return a weighted channel
 """
 
 import numpy as np
+from scipy.linalg import expm
 from tqdm import tqdm
 
 from .brickwall import (
@@ -23,7 +24,9 @@ from .optim import polar_sweeps
 def compile_ensemble(target, ansatz_depth, n_circuits=5,
                       tol=1e-2, max_bond=256,
                       max_iter=200, lr=2e-2, first_odd=True, seed=0,
-                      drop_rate=0.0):
+                      drop_rate=0.0, drop_rate_schedule=None,
+                      repel_lambda=0.0, top_k=None, n_pairs=0,
+                      perturb_scale=0.1):
     """Compile a weighted ensemble of brickwall circuits approximating V.
 
     All `n_circuits` members are optimized in a single batched call to
@@ -31,15 +34,36 @@ def compile_ensemble(target, ansatz_depth, n_circuits=5,
     execution across the batch dim. Each member starts from an
     independent Haar-random brickwall init.
 
+    Optional paired-opposite perturbation (Kalloor methods §Ensemble
+    Generation) — if `n_pairs > 0`, after the initial compile we
+    select the `top_k` best members (by compile cost), generate
+    `n_pairs` paired perturbations around each, and run the QP on the
+    expanded set `{top_k seeds} ∪ {2·n_pairs·top_k perturbed members}`.
+    The pairs are symmetric around each seed (`G·exp(+sH)`, `G·exp(-sH)`
+    per gate), so the convex hull contains V's neighborhood rather
+    than just scattered basins — the geometric condition Kalloor's
+    quadratic reduction actually needs.
+
     Args:
         target: qiskit QuantumCircuit.
         ansatz_depth: brickwall depth for every member.
-        n_circuits: ensemble size B.
+        n_circuits: ensemble size B for the initial Haar-random compile.
         tol, max_bond: passed to MPO compression.
         max_iter: polar sweeps per member.
         lr: unused (polar method); kept for ADAM-compat signature.
         drop_rate: per-gate polar-sweep dropout probability.
+        drop_rate_schedule: optional sweep-wise dropout schedule.
+        repel_lambda: diversity regularization strength in the batched
+            polar sweep. Each gate is pushed away from the mean of its
+            siblings' gates at the same position. 0 disables.
         seed: master RNG seed; derives per-member init seeds.
+        top_k: if set (and `n_pairs > 0`), select the top-K compiled
+            members by final cost to seed perturbation. Default None
+            means "don't perturb".
+        n_pairs: number of paired perturbations per selected seed.
+            Each pair contributes 2 members to the QP.
+        perturb_scale: ε for the perturbation `exp(±ε·H)` per gate,
+            where H is a random anti-Hermitian 4×4.
 
     Returns dict with keys:
         weights, circuits, delta_ens, R, compress_error, diamond_bound,
@@ -65,31 +89,49 @@ def compile_ensemble(target, ansatz_depth, n_circuits=5,
         init_gates_list, max_iter=max_iter,
         target_arrays=target_arrays, n_qubits=n, n_layers=ansatz_depth,
         max_bond=actual_bond, first_odd=first_odd,
-        drop_rate=drop_rate, seed=seed)
+        drop_rate=drop_rate, drop_rate_schedule=drop_rate_schedule,
+        seed=seed, repel_lambda=repel_lambda)
 
     ansatz = brickwall_ansatz_gates(n, ansatz_depth, first_odd)
-    circuits = [gates_to_circuit(g, n, ansatz) for g in opt_gates_list]
     compile_errors = [h[-1] for h in histories]
     for i, err in enumerate(compile_errors):
         print(f"  circuit {i}: cost={err:.2e}", flush=True)
 
-    # Target overlaps: the final polar-sweep cost gives
-    # `cost = 2 − 2·Re Tr(V†Uᵢ)/d`, so `Re Tr(V†Uᵢ) = (1 − cost/2)·d`.
-    # No need to re-contract — these are exact within the compile's
-    # own convention.
-    print("[ensemble] Computing pairwise overlaps...", flush=True)
-    d = 2.0 ** n
-    M = len(circuits)
-    overlaps = np.array([(1.0 - compile_errors[i] / 2.0) * d for i in range(M)])
+    # Optional paired-opposite perturbation of the top-K compiled members.
+    if n_pairs > 0 and top_k is not None and top_k > 0:
+        top_idx = sorted(range(len(opt_gates_list)),
+                         key=lambda i: compile_errors[i])[:top_k]
+        print(f"[ensemble] Expanding top-{top_k} seeds with {n_pairs} "
+              f"pair(s) each (scale={perturb_scale}) → "
+              f"{top_k + top_k * 2 * n_pairs} total members.",
+              flush=True)
+        seed_gate_sets = [opt_gates_list[i] for i in top_idx]
+        rng = np.random.default_rng(seed + 9999)
+        all_gate_sets = list(seed_gate_sets)
+        for gates in seed_gate_sets:
+            for _ in range(n_pairs):
+                plus, minus = _perturb_gates_paired(gates, perturb_scale, rng)
+                all_gate_sets.append(plus)
+                all_gate_sets.append(minus)
+    else:
+        all_gate_sets = opt_gates_list
 
-    # Pairwise Gram via MPO transfer-matrix contraction. The compiled
-    # circuits are shallow (depth d ≪ target depth), so bond≈32 is a
-    # safe floor; max_bond is an upper bound only used if the
-    # approximation genuinely needs it.
+    circuits = [gates_to_circuit(g, n, ansatz) for g in all_gate_sets]
+
+    # Gram + target overlaps via MPO transfer-matrix contraction. The
+    # compiled circuits are shallow (depth d ≪ target depth), so
+    # bond ≈ 32 is a safe floor; max_bond bounds genuine bond growth.
+    print("[ensemble] Computing overlaps...", flush=True)
+    d = 2.0 ** n
     overlap_bond = max(32, max_bond)
+    V_arrays = mpo_to_arrays(
+        circuit_to_mpo(target, max_bond=overlap_bond, tol=tol)[0])
     U_arrays = [mpo_to_arrays(
                     circuit_to_mpo(c, max_bond=overlap_bond, tol=tol)[0])
                 for c in tqdm(circuits, desc="Converting to MPO")]
+    M = len(circuits)
+    overlaps = np.array([mpo_overlap(U_arrays[i], V_arrays).real
+                         for i in range(M)])
     gram = np.zeros((M, M))
     for i in range(M):
         for j in range(i, M):
@@ -121,6 +163,94 @@ def compile_ensemble(target, ansatz_depth, n_circuits=5,
     }
 
 
+def compile_ensemble_optimal(
+    target, threshold, n_circuits=20, *,
+    search_n_seeds=3, search_lo=1, search_hi=24, search_max_iter=100,
+    search_tol=None, search_max_bond=None,
+    tol=1e-2, max_bond=256, max_iter=200, lr=2e-2,
+    first_odd=True, seed=0,
+    repel_lambda=0.0, top_k=None, n_pairs=0, perturb_scale=0.1,
+):
+    """Two-stage compile: cheap-search the smallest depth meeting a
+    single-circuit Frobenius threshold, then run the full ensemble at
+    that depth.
+
+    Stage 1 uses `compile_circuit_optimal` with a small search batch
+    (`search_n_seeds` members per probe) to find `D*` cheaply.
+    Stage 2 runs `compile_ensemble` at `D*` with `n_circuits` members
+    (typically ≥20 — required to see real Kalloor-QP ensemble gains).
+
+    Args:
+        target: qiskit QuantumCircuit.
+        threshold: single-circuit Frobenius `compile_error` target for
+            the binary search.
+        n_circuits: ensemble size B for the final QP (Stage 2).
+        search_n_seeds: B_search for each probe in Stage 1.
+        search_lo, search_hi: depth bounds for the binary search.
+        search_max_iter: polar sweeps per Stage-1 probe.
+        search_tol, search_max_bond: optional separate MPO compression
+            settings for Stage 1; default to (tol, max_bond).
+        Other args: forwarded to `compile_ensemble` for Stage 2.
+
+    Returns the same dict as `compile_ensemble`, with extra keys:
+        optimal_depth: D* (or None if no D in [lo, hi] meets threshold —
+            in that case Stage 2 runs at the highest probed depth).
+        search: per-probe per-seed Frobenius errors from Stage 1.
+    """
+    from .compiler import compile_circuit_optimal
+
+    s_tol = search_tol if search_tol is not None else tol
+    s_max_bond = search_max_bond if search_max_bond is not None else max_bond
+    print(
+        f"[ensemble-opt] Stage 1: binary-search D in [{search_lo}, {search_hi}] "
+        f"for threshold {threshold:.2e}  (B_search={search_n_seeds}, "
+        f"max_iter={search_max_iter})",
+        flush=True,
+    )
+    D_opt, _, info, search = compile_circuit_optimal(
+        target, threshold,
+        lo=search_lo, hi=search_hi, n_seeds=search_n_seeds,
+        tol=s_tol, max_bond=s_max_bond, max_iter=search_max_iter,
+        first_odd=first_odd, seed=seed,
+    )
+    if D_opt is None:
+        # Pick the depth with the lowest best-error seen — Stage 2 still
+        # gives the user *something* (a useful ensemble at the closest
+        # we got), and they can read off `optimal_depth=None` to know
+        # the threshold wasn't met.
+        chosen = info["depth"]
+        print(
+            f"[ensemble-opt] Stage 1: NO depth in [{search_lo}, {search_hi}] "
+            f"reached {threshold:.2e}; falling back to D={chosen} "
+            f"(best error seen = {info['compile_error']:.2e})",
+            flush=True,
+        )
+    else:
+        chosen = D_opt
+        print(
+            f"[ensemble-opt] Stage 1: D* = {D_opt} meets threshold "
+            f"({info['compile_error']:.2e} ≤ {threshold:.2e})",
+            flush=True,
+        )
+
+    print(
+        f"[ensemble-opt] Stage 2: compile_ensemble at D={chosen} "
+        f"with {n_circuits} circuits (max_iter={max_iter})",
+        flush=True,
+    )
+    result = compile_ensemble(
+        target, ansatz_depth=chosen, n_circuits=n_circuits,
+        tol=tol, max_bond=max_bond, max_iter=max_iter, lr=lr,
+        first_odd=first_odd, seed=seed,
+        repel_lambda=repel_lambda, top_k=top_k, n_pairs=n_pairs,
+        perturb_scale=perturb_scale,
+    )
+    result["optimal_depth"] = D_opt
+    result["chosen_depth"] = chosen
+    result["search"] = search
+    return result
+
+
 def find_min_depth(target, tol, max_depth=20, **kwargs):
     """Binary search for the minimum `ansatz_depth` with diamond_bound ≤ tol."""
     lo, hi = 1, max_depth
@@ -146,3 +276,26 @@ def _qc_to_gate_tensors(qc):
         if mat.shape == (4, 4):
             tensors.append(mat.reshape(2, 2, 2, 2))
     return tensors
+
+
+def _perturb_gates_paired(gate_tensors, scale, rng):
+    """Generate a ±-paired perturbation of a brickwall gate set.
+
+    For each 2-qubit gate `G`, draw a random anti-Hermitian 4×4 `H`
+    and produce the two members `G · exp(+s·H)` and `G · exp(-s·H)`.
+    The pair's arithmetic mean is `G · cosh(s·H) ≈ G` for small `s`,
+    so its convex hull sits symmetrically around the seed — the
+    geometric precondition for Kalloor's quadratic ReWEE reduction.
+    Different gates get independent `H` draws; different pair indices
+    get independent draws too.
+    """
+    plus, minus = [], []
+    for G in gate_tensors:
+        G_mat = np.asarray(G).reshape(4, 4)
+        X = (rng.standard_normal((4, 4))
+             + 1j * rng.standard_normal((4, 4)))
+        H = X - X.conj().T  # anti-Hermitian generator
+        step = scale * H
+        plus.append((G_mat @ expm(step)).reshape(2, 2, 2, 2))
+        minus.append((G_mat @ expm(-step)).reshape(2, 2, 2, 2))
+    return plus, minus

@@ -132,73 +132,101 @@ def compile_circuit(target, ansatz_depth, tol=1e-2,
 
 
 def compile_circuit_optimal(target, threshold, *, lo=1, hi=24, n_seeds=3,
-                              tol=1e-2, max_bond=256, max_iter=200, lr=1e-3,
-                              method="polar", first_odd=True, drop_rate=0.0,
-                              seed=0):
-    """Binary-search the smallest brickwall depth `D*` such that
-    ``compile_circuit(target, D*)`` reaches ``compile_error <= threshold``.
+                              tol=1e-2, max_bond=256, max_iter=200,
+                              first_odd=True, seed=0):
+    """Binary-search the smallest brickwall depth `D*` such that the best
+    of `n_seeds` polar compiles at depth `D*` reaches Frobenius
+    ``compile_error <= threshold``.
 
-    Per probe runs `n_seeds` independent Haar-init compiles and takes the
-    one with the lowest Frobenius error — this gives the strongest claim
-    that "depth D can achieve `threshold`". Each compile uses the
-    underlying `compile_circuit` (polar sweeps by default).
+    The n_seeds runs at each probe depth are dispatched as ONE batched
+    `polar_sweeps` call (B=n_seeds), so they share the JIT cache and
+    target-MPO build — much faster than n_seeds sequential
+    `compile_circuit` calls.
 
     Args:
         target: qiskit QuantumCircuit defining V.
         threshold: target Frobenius `compile_error`. The "optimal" D is
-            the smallest in [lo, hi] whose best run is ≤ threshold.
+            the smallest in [lo, hi] whose best (min over seeds) run is
+            ≤ threshold.
         lo, hi: search bounds on brickwall depth.
-        n_seeds: number of independent Haar init runs per probe.
-        Other args: forwarded to `compile_circuit`.
+        n_seeds: number of independent Haar init runs per probe (batched).
+        Other args: forwarded to the underlying `polar_sweeps` /
+            `build_target_arrays`.
 
     Returns:
         (D_opt, compiled, info, search) where:
           D_opt: optimal depth (int) or None if no D in [lo, hi] meets threshold
-          compiled, info: best `compile_circuit` result at D_opt (or at the
-              best probed depth if D_opt is None)
-          search: dict mapping each probed depth → list of per-seed results.
+          compiled, info: best polar result at D_opt (or at the best
+              probed depth if D_opt is None). info has keys
+              `cost_history`, `compress_error`, `compile_error`, `gate_tensors`.
+          search: dict mapping each probed depth → list of n_seeds
+              {seed_idx, compile_error, compress_error}.
     """
     n_qubits = target.num_qubits
-    search: dict[int, list[dict]] = {}
+    target_arrays, compress_error, actual_bond = build_target_arrays(
+        target, max_bond=max_bond, tol=tol)
 
-    def best_at(d: int) -> dict:
+    search: dict[int, dict] = {}  # depth → {seeds, gate_lists, histories}
+
+    def probe(d: int):
         if d in search:
-            return min(search[d], key=lambda r: r['compile_error'])
-        runs = []
-        for s in range(n_seeds):
-            init = _qc_to_gate_tensors_local(
+            return search[d]
+        # Build n_seeds Haar-random init gate lists.
+        init_gates_list = [
+            _qc_to_gate_tensors_local(
                 random_brickwall(n_qubits, d, first_odd=first_odd,
                                  seed=seed + 1000 * d + s))
-            compiled, info = compile_circuit(
-                target, d, tol=tol, max_bond=max_bond, max_iter=max_iter,
-                lr=lr, method=method, first_odd=first_odd,
-                init_gates=init, drop_rate=drop_rate, seed=seed + d * n_seeds + s)
-            runs.append({
+            for s in range(n_seeds)
+        ]
+        # ONE batched polar call for all n_seeds.
+        opt_gates_list, hist_list = polar_sweeps(
+            init_gates_list, max_iter=max_iter,
+            target_arrays=target_arrays, n_qubits=n_qubits,
+            n_layers=d, max_bond=actual_bond, first_odd=first_odd,
+            seed=seed + d)
+        per_seed = []
+        for s, hist in enumerate(hist_list):
+            per_seed.append({
                 'seed_idx': s,
-                'compile_error': float(info['compile_error']),
-                'compress_error': float(info['compress_error']),
-                'compiled': compiled,
-                'info': info,
+                'compile_error': float(hist[-1]) if hist else float('inf'),
             })
-        search[d] = runs
-        return min(runs, key=lambda r: r['compile_error'])
+        record = {
+            'depth': d,
+            'gate_lists': opt_gates_list,
+            'histories': hist_list,
+            'per_seed': per_seed,
+        }
+        search[d] = record
+        return record
+
+    def best_error(record):
+        return min(r['compile_error'] for r in record['per_seed'])
 
     optimal = None
     while lo <= hi:
         mid = (lo + hi) // 2
-        b = best_at(mid)
-        if b['compile_error'] <= threshold:
+        rec = probe(mid)
+        if best_error(rec) <= threshold:
             optimal = mid
             hi = mid - 1
         else:
             lo = mid + 1
 
-    chosen = optimal if optimal is not None else min(
-        search, key=lambda d: min(r['compile_error'] for r in search[d]))
-    chosen_best = best_at(chosen)
-    search_summary = {
-        d: [{k: v for k, v in r.items() if k not in ('compiled', 'info')}
-            for r in runs]
-        for d, runs in sorted(search.items())
+    chosen = optimal if optimal is not None else min(search, key=lambda d: best_error(search[d]))
+    rec = search[chosen]
+    best_idx = min(range(len(rec['per_seed'])),
+                   key=lambda s: rec['per_seed'][s]['compile_error'])
+    best_gates = rec['gate_lists'][best_idx]
+    best_hist = rec['histories'][best_idx]
+    ansatz = brickwall_ansatz_gates(n_qubits, chosen, first_odd)
+    compiled = gates_to_circuit(best_gates, n_qubits, ansatz)
+    info = {
+        'cost_history': best_hist,
+        'compress_error': float(compress_error),
+        'compile_error': float(best_hist[-1]) if best_hist else float('inf'),
+        'gate_tensors': best_gates,
+        'best_seed_idx': int(best_idx),
+        'depth': chosen,
     }
-    return optimal, chosen_best['compiled'], chosen_best['info'], search_summary
+    search_summary = {d: r['per_seed'] for d, r in sorted(search.items())}
+    return optimal, compiled, info, search_summary
